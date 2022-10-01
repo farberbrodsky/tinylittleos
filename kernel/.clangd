@@ -1,0 +1,2 @@
+CompileFlags:
+    Add: [-xc++, -m32, -Wall, -Wextra, -I.., -I../.., -ffreestanding]
