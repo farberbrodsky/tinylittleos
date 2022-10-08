@@ -40,6 +40,9 @@ namespace tty {
     };
 
     void initialize();
+
+    void move_cursor(unsigned short pos);
+
     void write(char c);
     void write(int val);
     void write(uint val);
