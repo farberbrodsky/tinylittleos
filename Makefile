@@ -19,6 +19,9 @@ kernel:
 qemu: iso
 	qemu-system-i386 -m 64M -chardev file,id=logfile,path=log.txt -serial chardev:logfile -cdrom os.iso
 
+qemu-gdb: iso
+	qemu-system-i386 -m 64M -chardev file,id=logfile,path=log.txt -serial chardev:logfile -cdrom os.iso -gdb tcp::1337
+
 clean:
 	$(MAKE) clean -C kernel
 	rm -f iso/boot/kernel.elf

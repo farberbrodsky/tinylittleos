@@ -20,6 +20,7 @@ kernel_stack:
 section .text
 loader:
     mov esp, kernel_stack + KERNEL_STACK_SIZE
+    cld
     extern kmain
     call kmain
 .loop:

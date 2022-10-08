@@ -1,0 +1,86 @@
+#include <kernel/interrupts.hpp>
+#include <kernel/util.hpp>
+#include <kernel/tty.hpp>
+#include <kernel/logging.hpp>
+
+extern "C" {
+    void load_idt(volatile void *addr);
+    extern char interrupt_handler_0;
+    extern char interrupt_handler_1;
+    extern char interrupt_handler_2;
+    extern char interrupt_handler_3;
+    extern char interrupt_handler_4;
+    extern char interrupt_handler_5;
+    extern char interrupt_handler_6;
+    extern char interrupt_handler_7;
+    extern char interrupt_handler_8;
+    extern char interrupt_handler_9;
+    extern char interrupt_handler_10;
+    extern char interrupt_handler_11;
+    extern char interrupt_handler_12;
+    extern char interrupt_handler_13;
+    extern char interrupt_handler_14;
+    extern char interrupt_handler_15;
+    extern char interrupt_handler_16;
+    extern char interrupt_handler_17;
+    extern char interrupt_handler_18;
+    extern char interrupt_handler_19;
+    extern char interrupt_handler_20;
+    extern char interrupt_handler_21;
+    extern char interrupt_handler_22;
+    extern char interrupt_handler_23;
+    extern char interrupt_handler_24;
+    extern char interrupt_handler_25;
+    extern char interrupt_handler_26;
+    extern char interrupt_handler_27;
+    extern char interrupt_handler_28;
+    extern char interrupt_handler_29;
+    extern char interrupt_handler_30;
+    extern char interrupt_handler_31;
+}
+
+struct __attribute__((packed)) idt_entry {
+	uint16_t    isr_low;      // The lower 16 bits of the ISR's address
+	uint16_t    kernel_cs;    // The GDT segment selector that the CPU will load into CS before calling the ISR
+	uint8_t     reserved;     // Set to zero
+	uint8_t     attributes;   // Type and attributes; see the IDT page
+                              // Interrupt Gate: 0x8e, Trap Gate: 0x8f
+	uint16_t    isr_high;     // The higher 16 bits of the ISR's address
+};
+
+static_assert(sizeof(idt_entry) == 8, "wrong idt entry size");
+
+__attribute__((aligned(0x10)))
+idt_entry idt_arr[256];
+
+struct {
+    unsigned short size;
+    unsigned int address;
+} __attribute__((packed, aligned(4))) idtr;
+
+void interrupts::initialize() {
+    TINY_INFO("Loading IDT");
+    char *interrupt_handler_table[] = { &interrupt_handler_0, &interrupt_handler_1, &interrupt_handler_2, &interrupt_handler_3, &interrupt_handler_4, &interrupt_handler_5, &interrupt_handler_6, &interrupt_handler_7, &interrupt_handler_8, &interrupt_handler_9, &interrupt_handler_10, &interrupt_handler_11, &interrupt_handler_12, &interrupt_handler_13, &interrupt_handler_14, &interrupt_handler_15, &interrupt_handler_16, &interrupt_handler_17, &interrupt_handler_18, &interrupt_handler_19, &interrupt_handler_20, &interrupt_handler_21, &interrupt_handler_22, &interrupt_handler_23, &interrupt_handler_24, &interrupt_handler_25, &interrupt_handler_26, &interrupt_handler_27, &interrupt_handler_28, &interrupt_handler_29, &interrupt_handler_30, &interrupt_handler_31 };
+
+    memset(idt_arr, 0, sizeof(idt_arr));  // TODO TODO TODO probably not needed...
+    for (int i = 0; i < 32; i++) {
+        // any entries that are not present will generate a General Protection Fault which is itself an interrupt
+        idt_arr[i].kernel_cs = 0x08;
+        idt_arr[i].isr_low  = reinterpret_cast<uint32_t>(interrupt_handler_table[i]) & 0xFFFF;
+        idt_arr[i].isr_high = reinterpret_cast<uint32_t>(interrupt_handler_table[i]) >> 16;
+        idt_arr[i].reserved = 0;
+        idt_arr[i].attributes = 0x8e;  // Interrupt Gate, not Trap Gate
+    }
+
+    idtr.address = reinterpret_cast<uint32_t>(idt_arr);
+    idtr.size = sizeof(idt_arr) - 1;
+    load_idt(&idtr);
+}
+
+extern "C" void internal_interrupt_handler(interrupts::interrupt_args *arg) {
+    if (arg->interrupt_number == 3) {
+        asm volatile("cli");
+        tty_driver::write("INT3!\n");
+        asm volatile("sti");
+    }
+}

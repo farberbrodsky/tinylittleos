@@ -2,6 +2,7 @@
 #include <kernel/util.hpp>
 #include <kernel/util/string.hpp>
 
+// TODO reentrancy, logs should not be intertwined
 namespace formatting {
     struct hex {
         uintptr_t val;

@@ -1,6 +1,6 @@
-OBJECTS = loader.o crti.o kmain.o util/str_util.o util/cstr.o util/kassert.o tty.o crtn.o io.o serial.o
+OBJECTS = loader.o crti.o kmain.o util/str_util.o util/cstr.o util/kassert.o tty.o crtn.o io.o serial.o memory/gdt.o memory/lgdt_asm.o interrupts/init.o interrupts/lidt_asm.o interrupts/interrupt_handlers.o
 CC = gcc
-CPPFLAGS = -m32 -Wall -Wextra -ffreestanding -fno-exceptions -fno-rtti \
+CPPFLAGS = -m32 -std=c++20 -Wall -Wextra -ffreestanding -fno-exceptions -fno-rtti \
 -I.. -I/usr/include
 
 LDFLAGS = -T link.ld -melf_i386

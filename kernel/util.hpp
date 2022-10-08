@@ -3,6 +3,7 @@
 
 using size_t = uintptr_t;
 using uint = unsigned int;
+using reg_t = size_t;
 void __kassert_fail_internal(const char *assertion, const char *file, uint line, const char *function);
 
 #define kassert(expr) __kassert_internal(expr, #expr, __FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -20,3 +21,5 @@ inline void quality_debugging() {
         asm("pause");
     }
 }
+
+#define kunused(var) ((void)(var))

@@ -1,0 +1,22 @@
+#pragma once
+#include <kernel/util.hpp>
+
+namespace interrupts {
+    struct __attribute__((packed)) interrupt_args {
+        // TODO may not be in correct order
+        reg_t ebp;
+        reg_t edi;
+        reg_t esi;
+        reg_t edx;
+        reg_t ecx;
+        reg_t ebx;
+        reg_t eax;
+        reg_t interrupt_number;
+        reg_t error_code;
+        reg_t eip;
+        reg_t cs;
+        reg_t eflags;
+    };
+
+    void initialize();
+}
