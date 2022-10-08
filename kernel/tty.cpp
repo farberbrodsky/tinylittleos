@@ -2,6 +2,9 @@
 #include <kernel/tty.hpp>
 #include <kernel/io.hpp>
 
+using formatting::color;
+using formatting::color_pair;
+
 static constexpr size_t VGA_WIDTH = 80;
 static constexpr size_t VGA_HEIGHT = 25;
 static constexpr uintptr_t VGA_MEMORY = 0x000b8000;
@@ -13,7 +16,7 @@ static volatile uint16_t *t_buf;
 static uint16_t internal_buf[VGA_WIDTH * VGA_HEIGHT];
 size_t internal_buf_i;  // ring buffer
 
-static inline uint8_t vga_color(tty::color fg, tty::color bg) {
+static inline uint8_t vga_color(color fg, color bg) {
     return (uint8_t)fg | ((uint8_t)bg << 4);
 }
 
@@ -30,7 +33,7 @@ void tty::initialize() {
     t_x = 0;
     t_y = 0;
     internal_buf_i = 0;
-    write(color_pair {color::black, color::white});
+    set_color(color_pair {color::black, color::white});
     t_buf = reinterpret_cast<volatile uint16_t *>(VGA_MEMORY);
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
@@ -52,10 +55,6 @@ void tty::move_cursor(unsigned short pos) {
     outb(FB_DATA_PORT,    pos & 0x00FF);
 }
 
-void tty::write(color_pair set_color) {
-    t_color = vga_color(set_color.fg, set_color.bg);
-}
-
 static void tty_scroll() {
     if (++internal_buf_i == VGA_HEIGHT) internal_buf_i = 0;
     for (size_t y = 0; y < VGA_HEIGHT; y++) {
@@ -68,7 +67,7 @@ static void tty_scroll() {
     }
 }
 
-void tty::write(char c) {
+void tty::put(char c) {
     if (c == '\n') {
         t_x = 0;
         if (t_y == VGA_HEIGHT - 1) {
@@ -92,17 +91,6 @@ void tty::write(char c) {
     tty::move_cursor(t_x + t_y * VGA_WIDTH);
 }
 
-void tty::write(int val) {
-    int_to_str_stack_buf buf;
-    tty::write(str_util::dec(val, buf));
-}
-
-void tty::write(uint val) {
-    int_to_str_stack_buf buf;
-    tty::write(str_util::dec(val, buf));
-}
-
-void tty::write(hex val) {
-    int_to_str_stack_buf buf;
-    tty::write(str_util::hex(val.val, buf));
+void tty::set_color(color_pair set_color) {
+    t_color = vga_color(set_color.fg, set_color.bg);
 }

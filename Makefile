@@ -17,7 +17,7 @@ kernel:
 	$(MAKE) -C kernel
 
 qemu: iso
-	qemu-system-i386 -m 64M -cdrom os.iso
+	qemu-system-i386 -m 64M -chardev file,id=logfile,path=log.txt -serial chardev:logfile -cdrom os.iso
 
 clean:
 	$(MAKE) clean -C kernel

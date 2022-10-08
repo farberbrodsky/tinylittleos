@@ -1,4 +1,4 @@
-OBJECTS = loader.o crti.o kmain.o util/str_util.o util/cstr.o util/kassert.o tty.o crtn.o io.o
+OBJECTS = loader.o crti.o kmain.o util/str_util.o util/cstr.o util/kassert.o tty.o crtn.o io.o serial.o
 CC = gcc
 CPPFLAGS = -m32 -Wall -Wextra -ffreestanding -fno-exceptions -fno-rtti \
 -I.. -I/usr/include
