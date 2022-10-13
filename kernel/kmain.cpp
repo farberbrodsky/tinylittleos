@@ -2,17 +2,20 @@
 #include <kernel/serial.hpp>
 #include <kernel/logging.hpp>
 #include <kernel/memory/gdt.hpp>
-#include <kernel/interrupts.hpp>
+#include <kernel/interrupts/init.hpp>
+#include <kernel/interrupts/pic.hpp>
 
 extern "C" void kmain(void) {
     tty::initialize();
     serial::initialize();
     TINY_INFO("Early boot, initialized I/O");
+
     memory::init_gdt();
+
     interrupts::initialize();
-    tty_driver::write("Hello!\n");
-    asm volatile("int3");
-    asm volatile("int3");
-    kassert(13 == 37);
-    while (1) { asm("hlt"); }
+    interrupts::sti();
+    interrupts::init_pic();
+
+    tty_driver::write("system up!\n");
+    while (1) { asm volatile("hlt"); }
 }

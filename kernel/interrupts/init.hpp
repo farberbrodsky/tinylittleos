@@ -19,4 +19,12 @@ namespace interrupts {
     };
 
     void initialize();
+    void register_handler(uint interrupt, void (*interrupt_handler)(interrupt_args &args));
+
+    inline void sti() {
+        asm volatile("sti");
+    }
+    inline void cli() {
+        asm volatile("cli");
+    }
 }

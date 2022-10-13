@@ -13,8 +13,14 @@ inline void __kassert_internal(bool expr, const char *assertion, const char *fil
     }
 }
 
-#define kpanic(msg) __kpanic_internal(msg, __FILE__, __LINE__, __PRETTY_FUNCTION__);
-void __kpanic_internal(const char *msg, const char *file, uint line, const char *function);
+#define kpanic(msg...) do {                                           \
+    __kpanic_internal_before();                                       \
+    tty_driver::write(msg);                                           \
+    __kpanic_internal_after(__FILE__, __LINE__, __PRETTY_FUNCTION__); \
+} while (0);
+
+void __kpanic_internal_before(void);
+void __kpanic_internal_after(const char *file, uint line, const char *function);
 
 inline void quality_debugging() {
     for (int i = 0; i < 10000000; i++) {

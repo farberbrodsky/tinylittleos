@@ -35,12 +35,21 @@ flush_cs:
     mov gs, ax
     ret
 
-; asm_lidt_and_sti - Loads the interrupt descriptor table (IDT), and set interrupts
+; asm_lldt - sets LDT (usually to 0)
+; stack: [esp + 4] the gdt descriptor address
+;        [esp    ] return address
+global asm_lldt
+asm_lldt:
+    mov eax, [esp + 4]
+    lldt [eax]
+    ret
+
+; asm_lidt - Loads the interrupt descriptor table (IDT), and set interrupts
 ; stack: [esp + 4] the address of the first entry in the IDT
 ;        [esp    ] the return address
-global asm_lidt_and_sti
-asm_lidt_and_sti:
+global asm_lidt
+asm_lidt:
     mov eax, [esp + 4]
     lidt [eax]
-    sti
     ret
+

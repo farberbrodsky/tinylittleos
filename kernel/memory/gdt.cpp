@@ -87,6 +87,11 @@ struct {
 } __attribute__((packed, aligned(4))) gdtr;
 
 void memory::init_gdt() {
+    // make sure LDT is cleared
+    gdtr.address = 0;
+    gdtr.size = 0;
+    asm_lldt(&gdtr);
+    // set GDT
     gdtr.address = reinterpret_cast<unsigned int>(&gdt_arr.a);
     gdtr.size = sizeof(gdt_arr) - 1;
     asm_lgdt(&gdtr);

@@ -1,4 +1,4 @@
-#include <kernel/interrupts.hpp>
+#include <kernel/interrupts/init.hpp>
 #include <kernel/util.hpp>
 #include <kernel/tty.hpp>
 #include <kernel/logging.hpp>
@@ -37,6 +37,22 @@ extern "C" {
     extern char interrupt_handler_29;
     extern char interrupt_handler_30;
     extern char interrupt_handler_31;
+    extern char interrupt_handler_32;
+    extern char interrupt_handler_33;
+    extern char interrupt_handler_34;
+    extern char interrupt_handler_35;
+    extern char interrupt_handler_36;
+    extern char interrupt_handler_37;
+    extern char interrupt_handler_38;
+    extern char interrupt_handler_39;
+    extern char interrupt_handler_40;
+    extern char interrupt_handler_41;
+    extern char interrupt_handler_42;
+    extern char interrupt_handler_43;
+    extern char interrupt_handler_44;
+    extern char interrupt_handler_45;
+    extern char interrupt_handler_46;
+    extern char interrupt_handler_47;
 }
 
 struct __attribute__((packed)) idt_entry {
@@ -58,29 +74,42 @@ struct {
     unsigned int address;
 } __attribute__((packed, aligned(4))) idtr;
 
+static void (*interrupt_handler_table[256])(interrupts::interrupt_args &arg);
+
+void interrupts::register_handler(uint interrupt, void (*interrupt_handler)(interrupt_args &args)) {
+    kassert(interrupt < 48);
+    interrupt_handler_table[interrupt] = interrupt_handler;
+}
+
 void interrupts::initialize() {
+    // zero out interrupt handler table
+    memset(interrupt_handler_table, 0, sizeof(interrupt_handler_table));
+
+    // load idt values
     TINY_INFO("Loading IDT");
-    char *interrupt_handler_table[] = { &interrupt_handler_0, &interrupt_handler_1, &interrupt_handler_2, &interrupt_handler_3, &interrupt_handler_4, &interrupt_handler_5, &interrupt_handler_6, &interrupt_handler_7, &interrupt_handler_8, &interrupt_handler_9, &interrupt_handler_10, &interrupt_handler_11, &interrupt_handler_12, &interrupt_handler_13, &interrupt_handler_14, &interrupt_handler_15, &interrupt_handler_16, &interrupt_handler_17, &interrupt_handler_18, &interrupt_handler_19, &interrupt_handler_20, &interrupt_handler_21, &interrupt_handler_22, &interrupt_handler_23, &interrupt_handler_24, &interrupt_handler_25, &interrupt_handler_26, &interrupt_handler_27, &interrupt_handler_28, &interrupt_handler_29, &interrupt_handler_30, &interrupt_handler_31 };
+    char *asm_isr_table[] = { &interrupt_handler_0, &interrupt_handler_1, &interrupt_handler_2, &interrupt_handler_3, &interrupt_handler_4, &interrupt_handler_5, &interrupt_handler_6, &interrupt_handler_7, &interrupt_handler_8, &interrupt_handler_9, &interrupt_handler_10, &interrupt_handler_11, &interrupt_handler_12, &interrupt_handler_13, &interrupt_handler_14, &interrupt_handler_15, &interrupt_handler_16, &interrupt_handler_17, &interrupt_handler_18, &interrupt_handler_19, &interrupt_handler_20, &interrupt_handler_21, &interrupt_handler_22, &interrupt_handler_23, &interrupt_handler_24, &interrupt_handler_25, &interrupt_handler_26, &interrupt_handler_27, &interrupt_handler_28, &interrupt_handler_29, &interrupt_handler_30, &interrupt_handler_31, &interrupt_handler_32, &interrupt_handler_33, &interrupt_handler_34, &interrupt_handler_35, &interrupt_handler_36, &interrupt_handler_37, &interrupt_handler_38, &interrupt_handler_39, &interrupt_handler_40, &interrupt_handler_41, &interrupt_handler_42, &interrupt_handler_43, &interrupt_handler_44, &interrupt_handler_45, &interrupt_handler_46, &interrupt_handler_47 };
 
     memset(idt_arr, 0, sizeof(idt_arr));
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < 48; i++) {
         // any entries that are not present will generate a General Protection Fault which is itself an interrupt
         idt_arr[i].kernel_cs = 0x08;
-        idt_arr[i].isr_low  = reinterpret_cast<uint32_t>(interrupt_handler_table[i]) & 0xFFFF;
-        idt_arr[i].isr_high = reinterpret_cast<uint32_t>(interrupt_handler_table[i]) >> 16;
+        idt_arr[i].isr_low  = reinterpret_cast<uint32_t>(asm_isr_table[i]) & 0xFFFF;
+        idt_arr[i].isr_high = reinterpret_cast<uint32_t>(asm_isr_table[i]) >> 16;
         idt_arr[i].reserved = 0;
         idt_arr[i].attributes = 0x8e;  // Interrupt Gate, not Trap Gate
     }
 
     idtr.address = reinterpret_cast<uint32_t>(idt_arr);
     idtr.size = sizeof(idt_arr) - 1;
-    asm_lidt_and_sti(&idtr);
+    asm_lidt(&idtr);
 }
 
 extern "C" void internal_interrupt_handler(interrupts::interrupt_args *arg) {
-    if (arg->interrupt_number == 3) {
-        asm volatile("cli");
-        tty_driver::write("INT3!\n");
-        asm volatile("sti");
+    if (interrupt_handler_table[arg->interrupt_number] == nullptr) [[unlikely]] {
+        interrupts::cli();
+        kpanic("Unhandled interrupt: ", arg->interrupt_number, " error code ", arg->error_code, " (0x", formatting::hex{arg->error_code}, ')');
+        interrupts::sti();
+        return;
     }
+    interrupt_handler_table[arg->interrupt_number](*arg);
 }
