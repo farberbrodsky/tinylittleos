@@ -2,9 +2,9 @@
 #include <kernel/util.hpp>
 #include <kernel/tty.hpp>
 #include <kernel/logging.hpp>
+#include <kernel/util/asm_wrap.hpp>
 
 extern "C" {
-    void load_idt(volatile void *addr);
     extern char interrupt_handler_0;
     extern char interrupt_handler_1;
     extern char interrupt_handler_2;
@@ -62,7 +62,7 @@ void interrupts::initialize() {
     TINY_INFO("Loading IDT");
     char *interrupt_handler_table[] = { &interrupt_handler_0, &interrupt_handler_1, &interrupt_handler_2, &interrupt_handler_3, &interrupt_handler_4, &interrupt_handler_5, &interrupt_handler_6, &interrupt_handler_7, &interrupt_handler_8, &interrupt_handler_9, &interrupt_handler_10, &interrupt_handler_11, &interrupt_handler_12, &interrupt_handler_13, &interrupt_handler_14, &interrupt_handler_15, &interrupt_handler_16, &interrupt_handler_17, &interrupt_handler_18, &interrupt_handler_19, &interrupt_handler_20, &interrupt_handler_21, &interrupt_handler_22, &interrupt_handler_23, &interrupt_handler_24, &interrupt_handler_25, &interrupt_handler_26, &interrupt_handler_27, &interrupt_handler_28, &interrupt_handler_29, &interrupt_handler_30, &interrupt_handler_31 };
 
-    memset(idt_arr, 0, sizeof(idt_arr));  // TODO TODO TODO probably not needed...
+    memset(idt_arr, 0, sizeof(idt_arr));
     for (int i = 0; i < 32; i++) {
         // any entries that are not present will generate a General Protection Fault which is itself an interrupt
         idt_arr[i].kernel_cs = 0x08;
@@ -74,7 +74,7 @@ void interrupts::initialize() {
 
     idtr.address = reinterpret_cast<uint32_t>(idt_arr);
     idtr.size = sizeof(idt_arr) - 1;
-    load_idt(&idtr);
+    asm_lidt_and_sti(&idtr);
 }
 
 extern "C" void internal_interrupt_handler(interrupts::interrupt_args *arg) {

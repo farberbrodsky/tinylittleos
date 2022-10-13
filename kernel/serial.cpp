@@ -1,5 +1,5 @@
 #include <kernel/serial.hpp>
-#include <kernel/io.hpp>
+#include <kernel/util/asm_wrap.hpp>
 
 // The I/O ports
 static constexpr unsigned short SERIAL_COM1_BASE = 0x3F8;  // COM1 base port
@@ -26,11 +26,11 @@ static constexpr unsigned char SERIAL_LINE_ENABLE_DLAB = 0x80;
  *  @param divisor  The divisor
  */
 static void serial_configure_baud_rate(unsigned short com, unsigned short divisor) {
-    outb(SERIAL_LINE_COMMAND_PORT(com),
+    asm_outb(SERIAL_LINE_COMMAND_PORT(com),
          SERIAL_LINE_ENABLE_DLAB);
-    outb(SERIAL_DATA_PORT(com),
+    asm_outb(SERIAL_DATA_PORT(com),
          (divisor >> 8) & 0x00FF);
-    outb(SERIAL_DATA_PORT(com),
+    asm_outb(SERIAL_DATA_PORT(com),
          divisor & 0x00FF);
 }
 
@@ -47,11 +47,11 @@ static void serial_configure_line(unsigned short com) {
      * Content: | d | b | prty  | s | dl  |
      * Value:   | 0 | 0 | 0 0 0 | 0 | 1 1 | = 0x03
      */
-    outb(SERIAL_LINE_COMMAND_PORT(com), 0x03);
+    asm_outb(SERIAL_LINE_COMMAND_PORT(com), 0x03);
 }
 
 static bool serial_is_transmit_fifo_empty(unsigned short com) {
-    return (inb(SERIAL_LINE_STATUS_PORT(com)) & 0x20) != 0;
+    return (asm_inb(SERIAL_LINE_STATUS_PORT(com)) & 0x20) != 0;
 }
 
 void serial::initialize() {
@@ -63,5 +63,5 @@ void serial::put(char c) {
     while (!serial_is_transmit_fifo_empty(SERIAL_COM1_BASE))
         asm("pause");
 
-    outb(SERIAL_DATA_PORT(SERIAL_COM1_BASE), c);
+    asm_outb(SERIAL_DATA_PORT(SERIAL_COM1_BASE), c);
 }

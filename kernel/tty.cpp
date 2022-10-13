@@ -1,6 +1,6 @@
 #include <kernel/util.hpp>
 #include <kernel/tty.hpp>
-#include <kernel/io.hpp>
+#include <kernel/util/asm_wrap.hpp>
 
 using formatting::color;
 using formatting::color_pair;
@@ -49,10 +49,10 @@ static constexpr unsigned char  FB_HIGH_BYTE_COMMAND = 14;
 static constexpr unsigned char  FB_LOW_BYTE_COMMAND  = 15;
 
 void tty::move_cursor(unsigned short pos) {
-    outb(FB_COMMAND_PORT, FB_HIGH_BYTE_COMMAND);
-    outb(FB_DATA_PORT,    ((pos >> 8) & 0x00FF));
-    outb(FB_COMMAND_PORT, FB_LOW_BYTE_COMMAND);
-    outb(FB_DATA_PORT,    pos & 0x00FF);
+    asm_outb(FB_COMMAND_PORT, FB_HIGH_BYTE_COMMAND);
+    asm_outb(FB_DATA_PORT,    ((pos >> 8) & 0x00FF));
+    asm_outb(FB_COMMAND_PORT, FB_LOW_BYTE_COMMAND);
+    asm_outb(FB_DATA_PORT,    pos & 0x00FF);
 }
 
 static void tty_scroll() {

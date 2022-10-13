@@ -1,10 +1,6 @@
 #include <kernel/util.hpp>
 #include <kernel/memory/gdt.hpp>
-#include <kernel/logging.hpp>
-
-extern "C" {
-    void lgdt(void *gdt_addr);
-}
+#include <kernel/util/asm_wrap.hpp>
 
 struct gdt_entry {
     uint32_t base;
@@ -93,5 +89,5 @@ struct {
 void memory::init_gdt() {
     gdtr.address = reinterpret_cast<unsigned int>(&gdt_arr.a);
     gdtr.size = sizeof(gdt_arr) - 1;
-    lgdt(&gdtr);
+    asm_lgdt(&gdtr);
 }
