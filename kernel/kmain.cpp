@@ -2,14 +2,16 @@
 #include <kernel/serial.hpp>
 #include <kernel/logging.hpp>
 #include <kernel/memory/gdt.hpp>
+#include <kernel/memory/multiboot.hpp>
 #include <kernel/interrupts/init.hpp>
 #include <kernel/interrupts/pic.hpp>
 
-extern "C" void kmain(void) {
+extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     tty::initialize();
     serial::initialize();
     TINY_INFO("Early boot, initialized I/O");
 
+    memory::read_multiboot_data(multiboot_data, multiboot_magic);
     memory::init_gdt();
 
     interrupts::initialize();

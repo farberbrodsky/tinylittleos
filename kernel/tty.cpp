@@ -7,7 +7,7 @@ using formatting::color_pair;
 
 static constexpr size_t VGA_WIDTH = 80;
 static constexpr size_t VGA_HEIGHT = 25;
-static constexpr uintptr_t VGA_MEMORY = 0x000b8000;
+static constexpr uintptr_t VGA_MEMORY = 0xC00B8000;
 
 static size_t t_x;
 static size_t t_y;

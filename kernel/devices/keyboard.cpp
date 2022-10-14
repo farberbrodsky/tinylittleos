@@ -16,7 +16,6 @@ char kbd_us[128] = {
 };
 
 void devices::keyboard::on_scan_code(unsigned char scan_code) {
-    TINY_INFO("Keyboard: ", scan_code);
     if (scan_code & 0x80) {
         // up event
         scan_code ^= 0x80;  // turn of that bit
