@@ -6,4 +6,5 @@ extern "C" {
     void asm_lgdt(void *addr);
     void asm_lldt(void *addr);
     void asm_lidt(void *addr);
+    void asm_set_cr3(void *addr);
 }

@@ -53,3 +53,20 @@ asm_lidt:
     lidt [eax]
     ret
 
+; asm_set_cr3 - sets cr3 (page directory register) to a new value
+; stack: [esp + 4] the address of the page directory
+;        [esp    ] the return address
+global asm_set_cr3
+asm_set_cr3:
+    mov eax, [esp + 4]
+    mov cr3, eax
+    ret
+
+; asm_invlpg - invalidate page at address
+; stack: [esp + 4] the address of the page
+;        [esp    ] the return address
+global asm_invlpg
+asm_invlpg:
+    mov eax, [esp + 4]
+    invlpg [eax]
+    ret

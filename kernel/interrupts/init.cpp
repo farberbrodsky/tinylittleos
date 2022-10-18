@@ -3,6 +3,7 @@
 #include <kernel/tty.hpp>
 #include <kernel/logging.hpp>
 #include <kernel/util/asm_wrap.hpp>
+#include <kernel/util/intlock.hpp>
 
 extern "C" {
     extern char interrupt_handler_0;
@@ -106,9 +107,10 @@ void interrupts::initialize() {
 
 extern "C" void internal_interrupt_handler(interrupts::interrupt_args *arg) {
     if (interrupt_handler_table[arg->interrupt_number] == nullptr) [[unlikely]] {
-        interrupts::cli();
-        kpanic("Unhandled interrupt: ", arg->interrupt_number, " error code ", arg->error_code, " (0x", formatting::hex{arg->error_code}, ')');
-        interrupts::sti();
+        scoped_intlock lock;
+        using formatting::hex;
+        TINY_ERR("UNHANDLED INTERRUPT !!!\nNUM ", arg->interrupt_number, "\nEBP ", hex{arg->ebp}, "\nEDI ", hex{arg->edi}, "\nESI ", hex{arg->esi}, "\nEDX ", hex{arg->edx}, "\nECX ", hex{arg->ecx}, "\nEBX ", hex{arg->ebx}, "\nEAX ", hex{arg->eax}, "\nERROR CODE ", hex{arg->error_code}, "\nEIP ", hex{arg->eip}, "\nCS ", hex{arg->cs}, "\nEFLAGS ", hex{arg->eflags});
+        kpanic("Unhandled interrupt: ", arg->interrupt_number, " error code ", arg->error_code, " (0x", hex{arg->error_code}, ')');
         return;
     }
     interrupt_handler_table[arg->interrupt_number](*arg);

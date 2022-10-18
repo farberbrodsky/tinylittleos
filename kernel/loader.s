@@ -21,7 +21,7 @@ align 4096
 bootstrap_page_directory:
     resb 4096
 
-section .text
+section .loader
 loader:
     ; bootstrap paging, the easy way: a single page directory with one 4MB huge page at 0xC0000000 and 4MB huge page at 0
     mov ecx, 0x83 ; Page Size (4MB) (1), Not Dirty (0), Not Accessed (0), Cached (0),
