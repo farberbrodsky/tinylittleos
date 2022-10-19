@@ -6,6 +6,7 @@
 #include <kernel/memory/page_allocator.hpp>
 #include <kernel/interrupts/init.hpp>
 #include <kernel/interrupts/pic.hpp>
+#include <kernel/scheduler/init.hpp>
 
 extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     tty::initialize();
@@ -19,6 +20,8 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     interrupts::initialize();
     interrupts::sti();
     interrupts::init_pic();
+
+    scheduler::initialize();
 
     tty_driver::write("system up!\n");
     while (1) { asm volatile("hlt"); }

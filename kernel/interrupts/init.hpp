@@ -3,7 +3,6 @@
 
 namespace interrupts {
     struct __attribute__((packed)) interrupt_args {
-        // TODO may not be in correct order
         reg_t ebp;
         reg_t edi;
         reg_t esi;

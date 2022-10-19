@@ -1,6 +1,6 @@
 #include <kernel/memory/multiboot.hpp>
 
-size_t memory::ram_amount;
+size_t memory::ram_amount;  // global
 
 void memory::read_multiboot_data(multiboot_info_t *data, uint magic) {
     data = (multiboot_info_t *)((char *)data + 0xC0000000);

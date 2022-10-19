@@ -52,7 +52,7 @@ namespace memory {
     };
 
     enum class page_flag : uint32_t {
-        present = 1,
+        present = 1 | 1 << 2,  // TODO TODO TODO poc only! Remove this
         write = 1 << 1,
         user = 1 << 2,
         write_through = 1 << 3,

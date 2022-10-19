@@ -68,14 +68,14 @@ struct __attribute__((packed)) idt_entry {
 static_assert(sizeof(idt_entry) == 8, "wrong idt entry size");
 
 __attribute__((aligned(0x10)))
-idt_entry idt_arr[256];
+idt_entry idt_arr[256];  // global
 
 struct {
     unsigned short size;
     unsigned int address;
-} __attribute__((packed, aligned(4))) idtr;
+} __attribute__((packed, aligned(4))) idtr;  // global
 
-static void (*interrupt_handler_table[256])(interrupts::interrupt_args &arg);
+static void (*interrupt_handler_table[256])(interrupts::interrupt_args &arg);  // global
 
 void interrupts::register_handler(uint interrupt, void (*interrupt_handler)(interrupt_args &args)) {
     kassert(interrupt < 48);
@@ -106,6 +106,7 @@ void interrupts::initialize() {
 }
 
 extern "C" void internal_interrupt_handler(interrupts::interrupt_args *arg) {
+    // interrupts are disabled automatically
     if (interrupt_handler_table[arg->interrupt_number] == nullptr) [[unlikely]] {
         scoped_intlock lock;
         using formatting::hex;

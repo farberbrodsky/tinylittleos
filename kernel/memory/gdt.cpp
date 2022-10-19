@@ -1,6 +1,8 @@
 #include <kernel/util.hpp>
 #include <kernel/memory/gdt.hpp>
 #include <kernel/util/asm_wrap.hpp>
+#include <kernel/scheduler/init.hpp>
+using scheduler::global_tss;
 
 struct gdt_entry {
     uint32_t base;
@@ -71,20 +73,24 @@ static consteval encoded_gdt_entry gdt_entry(gdt_entry source) {
 // 0 - reserved
 
 __attribute__((aligned(4)))
-encoded_gdt_array<3> gdt_arr { concat_gdt_entries(
+encoded_gdt_array<6> gdt_arr { concat_gdt_entries(  // global
     // null descriptor
     gdt_entry({ .base = 0, .limit = 0,       .access_byte = 0,          .flags = 0      }),
     // kernel cs
     gdt_entry({ .base = 0, .limit = 0xFFFFF, .access_byte = 0b10011010, .flags = 0b1100 }),
     // kernel ds
-    gdt_entry({ .base = 0, .limit = 0xFFFFF, .access_byte = 0b10010010, .flags = 0b1100 })) };
-
-// user cs, user ds, tss....... todo
+    gdt_entry({ .base = 0, .limit = 0xFFFFF, .access_byte = 0b10010010, .flags = 0b1100 }),
+    // user cs
+    gdt_entry({ .base = 0, .limit = 0xFFFFF, .access_byte = 0b11111010, .flags = 0b1100 }),
+    // user ds
+    gdt_entry({ .base = 0, .limit = 0xFFFFF, .access_byte = 0b11110010, .flags = 0b1100 }),
+    // TSS
+    gdt_entry({ .base = 0, .limit = sizeof(global_tss), .access_byte = 0b10001001, .flags = 0 })) };
 
 struct {
     unsigned short size;
     unsigned int address;
-} __attribute__((packed, aligned(4))) gdtr;
+} __attribute__((packed, aligned(4))) gdtr;  // global
 
 void memory::init_gdt() {
     // make sure LDT is cleared
@@ -92,7 +98,14 @@ void memory::init_gdt() {
     gdtr.size = 0;
     asm_lldt(&gdtr);
     // set GDT
+    uint32_t tss_addr = (uint32_t)&global_tss;
+    gdt_arr.a[0x28 + 2] = tss_addr & 0xFF;
+    gdt_arr.a[0x28 + 3] = (tss_addr >> 8) & 0xFF;
+    gdt_arr.a[0x28 + 4] = (tss_addr >> 16) & 0xFF;
+    gdt_arr.a[0x28 + 7] = (tss_addr >> 24) & 0xFF;
     gdtr.address = reinterpret_cast<unsigned int>(&gdt_arr.a);
     gdtr.size = sizeof(gdt_arr) - 1;
     asm_lgdt(&gdtr);
+    // set TSS
+    asm_flush_tss();
 }

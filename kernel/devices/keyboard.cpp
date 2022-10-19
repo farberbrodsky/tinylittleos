@@ -2,9 +2,10 @@
 #include <kernel/devices/keyboard.hpp>
 #include <kernel/tty.hpp>
 #include <kernel/logging.hpp>
+#include <kernel/util/intlock.hpp>
 
 // 128 bits of is_down
-static uint32_t is_down[4];
+static uint32_t is_down[4];  // global
 
 char kbd_us[128] = {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b', '\t',
@@ -16,6 +17,8 @@ char kbd_us[128] = {
 };
 
 void devices::keyboard::on_scan_code(unsigned char scan_code) {
+    scoped_intlock lock;
+
     if (scan_code & 0x80) {
         // up event
         scan_code ^= 0x80;  // turn of that bit

@@ -21,8 +21,6 @@ static void send_end_of_interrupt(uint interrupt) {
 }
 
 static void pic_interrupt_handler(interrupts::interrupt_args &args) {
-    interrupts::cli();
-
     uint num = args.interrupt_number - 0x20;
     if (num == 0) {
         // TODO timer interrupt handler
@@ -34,8 +32,6 @@ static void pic_interrupt_handler(interrupts::interrupt_args &args) {
     }
 
     send_end_of_interrupt(num);
-
-    interrupts::sti();
 }
 
 // default IRQs for master pic and slave pic are 0 to 7 and 8 to 15

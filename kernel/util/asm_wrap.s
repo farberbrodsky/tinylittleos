@@ -70,3 +70,45 @@ asm_invlpg:
     mov eax, [esp + 4]
     invlpg [eax]
     ret
+
+; asm_flush_tss - flush TSS, no arguments
+global asm_flush_tss
+asm_flush_tss:
+    mov ax, 0x28
+    ltr ax
+    ret
+
+; asm_enter_usermode - enter usermode with iret
+; stack: [esp + 8] stack address to use
+;        [esp + 4] function address to call
+;        [esp    ] the return address
+;
+; an inter-privilege level interrupt needs to have a stack of:
+; - ss, esp, eflags, cs, eip
+global asm_enter_usermode
+asm_enter_usermode:
+    mov ebx, [esp + 4]
+    mov ecx, [esp + 8]
+    mov ax, 0x20 | 3  ; ring 3 - set by bottom bits of segment selector
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    mov eax, esp
+    push 0x20 | 3  ; ss
+    push ecx;      ; esp
+    pushf          ; using the current EFLAGS
+    push 0x18 | 3  ; cs
+    push ebx       ; eip
+
+    ; reset all registers to 0
+    mov eax, 0
+    mov ebx, 0
+    mov ecx, 0
+    mov edx, 0
+    mov esi, 0
+    mov edi, 0
+    mov ebp, 0
+
+    iret
