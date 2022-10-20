@@ -13,8 +13,8 @@ static void sleep() {
 void scheduler::initialize() {
     memset(&global_tss, 0, sizeof(global_tss));
     // allocate interrupt stack page
-    global_tss.esp0 = (uint32_t)memory::kmem_alloc_page();
+    global_tss.esp0 = (uint32_t)memory::kmem_alloc_8k();
     global_tss.ss0 = 0x10;
 
-    asm_enter_usermode((void *)&sleep, memory::kmem_alloc_page());
+    asm_enter_usermode((void *)&sleep, memory::kmem_alloc_8k());
 }

@@ -63,6 +63,12 @@ namespace memory {
     };
 
     void init_page_allocator();
-    void *kmem_alloc_page();
-    void kmem_free_page(void *addr);
+    void *kmem_alloc_4k();
+    void *kmem_alloc_8k();
+    void *kmem_alloc_16k();
+    void *kmem_alloc_32k();
+    void kmem_free_4k(void *ptr);
+    void kmem_free_8k(void *ptr);
+    void kmem_free_16k(void *ptr);
+    void kmem_free_32k(void *ptr);
 }

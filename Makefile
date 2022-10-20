@@ -1,4 +1,4 @@
-.PHONY: iso kernel qemu clean
+.PHONY: iso kernel qemu qemu-gdb qemu-kernel qemu-test clean
 
 iso: kernel
 	cp kernel/kernel.elf iso/boot/kernel.elf
@@ -14,7 +14,7 @@ iso: kernel
 				iso
 
 kernel:
-	$(MAKE) -C kernel
+	$(MAKE) -C kernel testname=$(testname)
 
 qemu: iso
 	qemu-system-i386 -m 64M -chardev file,id=logfile,path=log.txt -serial chardev:logfile -cdrom os.iso
@@ -24,6 +24,10 @@ qemu-gdb: iso
 
 qemu-kernel: iso
 	qemu-system-i386 -m 64M -chardev file,id=logfile,path=log.txt -serial chardev:logfile -kernel kernel/kernel.elf
+
+qemu-test: iso
+	# qemu-system-i386 -m 64M -chardev file,id=logfile,path=log.txt -serial chardev:logfile -cdrom os.iso -display none
+	python3 scripts/test_runner.py
 
 clean:
 	$(MAKE) clean -C kernel

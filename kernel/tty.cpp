@@ -1,6 +1,7 @@
 #include <kernel/util.hpp>
 #include <kernel/tty.hpp>
 #include <kernel/util/asm_wrap.hpp>
+#include <kernel/serial.hpp>
 
 using formatting::color;
 using formatting::color_pair;
@@ -49,12 +50,17 @@ static constexpr unsigned char  FB_HIGH_BYTE_COMMAND = 14;
 static constexpr unsigned char  FB_LOW_BYTE_COMMAND  = 15;
 
 void tty::move_cursor(unsigned short pos) {
+#ifndef TINY_TEST
     asm_outb(FB_COMMAND_PORT, FB_HIGH_BYTE_COMMAND);
     asm_outb(FB_DATA_PORT,    ((pos >> 8) & 0x00FF));
     asm_outb(FB_COMMAND_PORT, FB_LOW_BYTE_COMMAND);
     asm_outb(FB_DATA_PORT,    pos & 0x00FF);
+#else
+    kunused(pos);
+#endif
 }
 
+#ifndef TINY_TEST
 static void tty_scroll() {
     if (++internal_buf_i == VGA_HEIGHT) internal_buf_i = 0;
     for (size_t y = 0; y < VGA_HEIGHT; y++) {
@@ -66,7 +72,13 @@ static void tty_scroll() {
         set_char(' ', t_color, x, VGA_HEIGHT - 1);
     }
 }
+#endif
 
+#ifdef TINY_TEST
+void tty::put(char c) {
+    serial::put(c);
+}
+#else
 void tty::put(char c) {
     if (c == '\n') {
         t_x = 0;
@@ -90,7 +102,14 @@ void tty::put(char c) {
 
     tty::move_cursor(t_x + t_y * VGA_WIDTH);
 }
+#endif
 
+#ifdef TINY_TEST
+void tty::set_color(color_pair set_color) {
+    serial::set_color(set_color);
+}
+#else
 void tty::set_color(color_pair set_color) {
     t_color = vga_color(set_color.fg, set_color.bg);
 }
+#endif

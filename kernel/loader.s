@@ -4,7 +4,7 @@ MAGIC_NUMBER equ 0x1BADB002     ; define the magic number constant
 FLAGS        equ 0x0            ; multiboot flags
 CHECKSUM     equ -MAGIC_NUMBER  ; calculate the checksum
                                 ; (magic number + checksum + flags should equal 0)
-KERNEL_STACK_SIZE equ 4096
+KERNEL_STACK_SIZE equ 8192
 
 section .multiboot.data
 align 4
