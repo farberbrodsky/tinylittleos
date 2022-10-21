@@ -1,2 +1,2 @@
 CompileFlags:
-    Add: [-xc++, -std=c++20, -m32, -Wall, -Wextra, -I.., -I../.., -ffreestanding]
+    Add: [-xc++, -std=c++20, -m32, -Wall, -Wextra, -I.., -I../.., -I../../.., -ffreestanding]

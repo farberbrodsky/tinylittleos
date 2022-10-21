@@ -30,6 +30,12 @@ inline void quality_debugging() {
 
 #define kunused(var) ((void)(var))
 
+// TODO TODO TODO remember to make use of __user
+# define __user __attribute__((noderef, address_space(1)))
+
+// C++ features
+
+// std::move
 namespace std {
     template <class T> struct remove_reference      { typedef T type; };
     template <class T> struct remove_reference<T&>  { typedef T type; };
@@ -40,6 +46,8 @@ namespace std {
         return static_cast<remove_reference_t<T>&&>(t);
     }
 }
-
-// TODO TODO TODO remember to make use of __user
-# define __user __attribute__((noderef, address_space(1)))
+// placement new
+inline void *operator new(size_t, void *p)     throw() { return p; }
+inline void *operator new[](size_t, void *p)   throw() { return p; }
+inline void  operator delete  (void *, void *) throw() { };
+inline void  operator delete[](void *, void *) throw() { };

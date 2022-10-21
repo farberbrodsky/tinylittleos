@@ -17,10 +17,10 @@ public:
     }
 
     // move semantics
-    inline scoped_intlock(scoped_intlock&& other) : m_flags(other.m_flags) {
+    inline scoped_intlock(scoped_intlock&& other) noexcept : m_flags(other.m_flags) {
         other.m_flags = 0;  // shouldn't set interrupts back
     }
-    inline scoped_intlock &operator=(scoped_intlock&& other) {
+    inline scoped_intlock &operator=(scoped_intlock&& other) noexcept {
         m_flags = other.m_flags;
         other.m_flags = 0;
         return *this;
@@ -45,11 +45,11 @@ public:
     }
 
     // move semantics
-    inline scoped_preemptlock(scoped_preemptlock&& other) : m_moved {false} {
+    inline scoped_preemptlock(scoped_preemptlock&& other) noexcept : m_moved {false} {
         other.m_moved = true;
         // don't increase again
     }
-    inline scoped_preemptlock &operator=(scoped_preemptlock&& other) {
+    inline scoped_preemptlock &operator=(scoped_preemptlock&& other) noexcept {
         m_moved = other.m_moved;
         other.m_moved = true;
         return *this;
