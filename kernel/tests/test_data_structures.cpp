@@ -5,6 +5,7 @@
 #include <kernel/memory/gdt.hpp>
 #include <kernel/memory/page_allocator.hpp>
 #include <kernel/interrupts/init.hpp>
+#include <kernel/interrupts/pic.hpp>
 #include <kernel/util/ds/bitset.hpp>
 
 static void test_bitset() {
@@ -42,7 +43,8 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     memory::init_page_allocator();
 
     interrupts::initialize();
-    interrupts::sti();
+    interrupts::init_pic();
+    interrupts::start();
 
     test_bitset();
 

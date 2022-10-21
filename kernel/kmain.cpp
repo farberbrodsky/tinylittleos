@@ -18,8 +18,8 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     memory::init_page_allocator();
 
     interrupts::initialize();
-    interrupts::sti();
     interrupts::init_pic();
+    interrupts::start();
 
     scheduler::initialize();
 

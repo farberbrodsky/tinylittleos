@@ -24,6 +24,55 @@ namespace ds {
             uint32_t bit = 1 << (index & 0x1F);
             return (m_set[arr_index] & bit) != 0;
         }
+        inline constexpr uint32_t find_bit() {
+            for (uint32_t i = 0; i < int_count; i++) {
+                if (m_set[i] != 0) {
+                    return (i << 5) + __builtin_ctz(m_set[i]);
+                }
+            }
+            return -1;
+        }
+
+        inline constexpr void set_all_until(uint32_t index) {
+            // NOTE: Assume all other bits are cleared before calling
+            uint32_t ints_before = index >> 5;  // 31 has 0 ints before
+            for (uint32_t i = 0; i < ints_before; i++) {
+                m_set[i] = 0xFFFFFFFF;
+            }
+            uint32_t remainder = index & 0x1f;
+            m_set[ints_before] = (1 << remainder) - 1;  // 3 -> 0b1000 -> 0b0111
+        }
+        inline constexpr void clear_all() {
+            for (uint32_t i = 0; i < int_count; i++) {
+                m_set[i] = 0;
+            }
+        }
+        inline constexpr bool all_set_until(uint32_t index) {
+            uint32_t ints_before = index >> 5;  // 31 has 0 ints before
+            for (uint32_t i = 0; i < ints_before; i++) {
+                if (m_set[i] != 0xFFFFFFFF) return false;
+            }
+            uint32_t remainder = index & 0x1f;
+            uint32_t mask = (1 << remainder) - 1;
+            if ((m_set[ints_before] & mask) != mask) return false;
+            return true;
+        }
+        inline constexpr bool all_clear_until(uint32_t index) {
+            uint32_t ints_before = index >> 5;  // 31 has 0 ints before
+            for (uint32_t i = 0; i < ints_before; i++) {
+                if (m_set[i] != 0) return false;
+            }
+            uint32_t remainder = index & 0x1f;
+            uint32_t mask = (1 << remainder) - 1;
+            if ((m_set[ints_before] & mask) != 0) return false;
+            return true;
+        }
+        inline constexpr bool all_clear() {
+            for (uint32_t i = 0; i < int_count; i++) {
+                if (m_set[i] != 0) return false;
+            }
+            return true;
+        }
 
         bitset(const bitset &other) = default;
         bitset &operator=(const bitset &other) = default;

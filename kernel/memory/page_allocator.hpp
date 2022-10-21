@@ -71,4 +71,32 @@ namespace memory {
     void kmem_free_8k(void *ptr);
     void kmem_free_16k(void *ptr);
     void kmem_free_32k(void *ptr);
+
+    template <size_t N>
+    inline void *kmem_alloc_pages() {
+        static_assert(N == 4096 || N == 8192 || N == 16384 || N == 32768, "Invalid size");
+        if constexpr (N == 4096) {
+            return kmem_alloc_4k();
+        } else if constexpr (N == 8192) {
+            return kmem_alloc_8k();
+        } else if constexpr (N == 16384) {
+            return kmem_alloc_16k();
+        } else if constexpr (N == 32768) {
+            return kmem_alloc_32k();
+        }
+    }
+
+    template <size_t N>
+    inline void kmem_free_pages(void *ptr) {
+        static_assert(N == 4096 || N == 8192 || N == 16384 || N == 32768, "Invalid size");
+        if constexpr (N == 4096) {
+            kmem_free_4k(ptr);
+        } else if constexpr (N == 8192) {
+            kmem_free_8k(ptr);
+        } else if constexpr (N == 16384) {
+            kmem_free_16k(ptr);
+        } else if constexpr (N == 32768) {
+            kmem_free_32k(ptr);
+        }
+    }
 }

@@ -18,6 +18,7 @@ namespace interrupts {
     };
 
     void initialize();
+    void start();  // start getting interrupts
     void register_handler(uint interrupt, void (*interrupt_handler)(interrupt_args &args));
 
     inline void sti() {

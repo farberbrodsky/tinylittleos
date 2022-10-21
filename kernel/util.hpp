@@ -8,7 +8,7 @@ void __kassert_fail_internal(const char *assertion, const char *file, uint line,
 
 #define kassert(expr) __kassert_internal(expr, #expr, __FILE__, __LINE__, __PRETTY_FUNCTION__);
 inline void __kassert_internal(bool expr, const char *assertion, const char *file, uint line, const char *function) {
-    if (!expr) {
+    if (!expr) [[unlikely]] {
         __kassert_fail_internal(assertion, file, line, function);
     }
 }

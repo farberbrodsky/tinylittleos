@@ -104,7 +104,7 @@ private:
         return res;
     }
     void mark_free_k4(uint32_t index) {
-        if (k4[0] == 0 && k4[1] == 0 && k4[2] == 0 && k4[3] == 0) {
+        if (prev_k4 == nullptr && k4[0] == 0 && k4[1] == 0 && k4[2] == 0 && k4[3] == 0) {
             // link to k4
             next_k4 = kmem_allocator.first_k4.next_k4;
             if (next_k4 != nullptr) next_k4->prev_k4 = this;
@@ -133,7 +133,7 @@ private:
         return res;
     }
     void mark_free_k8(uint32_t index) {
-        if (k8[0] == 0 && k8[1] == 0) {
+        if (prev_k8 == nullptr && k8[0] == 0 && k8[1] == 0) {
             // link to k8
             next_k8 = kmem_allocator.first_k8.next_k8;
             if (next_k8 != nullptr) next_k8->prev_k8 = this;
@@ -159,7 +159,7 @@ private:
         return res;
     }
     void mark_free_k16(uint32_t index) {
-        if (k16 == 0) {
+        if (prev_k16 == nullptr && k16 == 0) {
             // link to k16
             next_k16 = kmem_allocator.first_k16.next_k16;
             if (next_k16 != nullptr) next_k16->prev_k16 = this;
@@ -184,7 +184,7 @@ private:
         return res;
     }
     void mark_free_k32(uint32_t index) {
-        if (k32 == 0) {
+        if (prev_k32 == nullptr && k32 == 0) {
             // link to k32
             next_k32 = kmem_allocator.first_k32.next_k32;
             if (next_k32 != nullptr) next_k32->prev_k32 = this;
@@ -375,7 +375,9 @@ static void *buddy_alloc() {
     buddy &first = kmem_allocator.first_N<N>();
     buddy *next = first.next_N<N>();
     if (next != nullptr) [[likely]] {
-        return next->alloc<N>();
+        void *res = next->alloc<N>();
+        memset(res, 0x41, N);  // TODO remove, debugging tool
+        return res;
     } else {
         return nullptr;
     }
@@ -413,6 +415,7 @@ static void kmem_buddy_new() {
         constexpr uint32_t prwr = (uint32_t)page_flag::present | (uint32_t)page_flag::write;
         _map_page((void *)addr, prwr, prwr | phys_t::from_kmem((void *)addr).value());
     }
+    kmem_phys_end = phys_t(kmem_phys_end.value() + 128 * 4096);
 }
 
 void *memory::kmem_alloc_4k() {
@@ -468,6 +471,7 @@ void memory::kmem_free_4k(void *ptr) {
 
     uint32_t buddy_rel_pos = (uint32_t)ptr - ((uint32_t)buddy_array) - buddy_array_size;
     buddy &bud = buddy_array[buddy_rel_pos >> 19];
+    kassert((buddy_rel_pos & 0x0FFF) == 0);
     uint32_t alloc_index = (buddy_rel_pos & 0x7FFFF) >> 12;  // 0x7FFFF is 1<<19 - 1, >>12 is for 4k division
     bud.free<4096>(alloc_index);
 }
@@ -477,6 +481,7 @@ void memory::kmem_free_8k(void *ptr) {
 
     uint32_t buddy_rel_pos = (uint32_t)ptr - ((uint32_t)buddy_array) - buddy_array_size;
     buddy &bud = buddy_array[buddy_rel_pos >> 19];
+    kassert((buddy_rel_pos & 0x1FFF) == 0);
     uint32_t alloc_index = (buddy_rel_pos & 0x7FFFF) >> 13;
     bud.free<8192>(alloc_index);
 }
@@ -486,6 +491,7 @@ void memory::kmem_free_16k(void *ptr) {
 
     uint32_t buddy_rel_pos = (uint32_t)ptr - ((uint32_t)buddy_array) - buddy_array_size;
     buddy &bud = buddy_array[buddy_rel_pos >> 19];
+    kassert((buddy_rel_pos & 0x3FFF) == 0);
     uint32_t alloc_index = (buddy_rel_pos & 0x7FFFF) >> 14;
     bud.free<16384>(alloc_index);
 }
@@ -495,6 +501,7 @@ void memory::kmem_free_32k(void *ptr) {
 
     uint32_t buddy_rel_pos = (uint32_t)ptr - ((uint32_t)buddy_array) - buddy_array_size;
     buddy &bud = buddy_array[buddy_rel_pos >> 19];
+    kassert((buddy_rel_pos & 0x7FFF) == 0);
     uint32_t alloc_index = (buddy_rel_pos & 0x7FFFF) >> 15;
     bud.free<32768>(alloc_index);
 }
@@ -518,9 +525,9 @@ static void _map_page(void *virt, uint32_t pde_flags, uint32_t pte) {
         page_table = (uint32_t *)kmem_alloc_4k();
         if (dir_entry & (uint32_t)page_flag::present) [[unlikely]] {
             // kmem_alloc_4k created a page table for us, so we don't need this one anymore
+            kmem_free_4k(page_table);
             page_table = (uint32_t *)(void *)(phys_t(dir_entry).align_page_down().to_virt());
             page_table[tab_index] = pte;
-            kmem_free_4k(page_table);
             return;
         }
         // normal path
@@ -541,18 +548,20 @@ void memory::init_page_allocator() {
 
     phys_t buddy_memory_phys = phys_t::from_kmem(&_kernel_end).align_page_up();
     buddy_array = (buddy *)buddy_memory_phys.to_virt();
-    buddy_array_size = total_buddy_page_count << 12;
+    uint32_t buddy_array_end = (((uint32_t)buddy_array + (total_buddy_page_count << 12) + 32767) >> 15) << 15;  // align up to 32k, so that allocations are aligned
+    buddy_array_size = buddy_array_end - (uint32_t)buddy_array;
+
     buddy_array_pos = 0;
     phys_t buddy_memory_end_phys = phys_t(buddy_memory_phys.value() + buddy_array_size);
+    memset(&kmem_allocator, 0, sizeof(kmem_allocator));
     kmem_buddy_new_no_alloc();  // first buddy allocation will come with the rest of the kernel
 
-    // set kmem and hmem beginning
-    kmem_phys_end = buddy_memory_end_phys;
+    // set kmem and hmem beginning - already WITH first buddy
+    kmem_phys_end = phys_t(buddy_memory_end_phys.value() + 128 * 4096);
     hmem_phys_end = phys_t(ram_amount_start + ram_amount).align_page_down();
     hmem_end = 0;  // will be reduced to 0xFFFFF000
 
-    // initially map a whole 512k buddy into memory
-    uint32_t initially_mapped = 0xC0000000 + kmem_phys_end.value() + (512 * 4096);
+    uint32_t initially_mapped = kmem_phys_end.to_virt();
 
     memset(first_page_directory, 0, 4096);
     for (uint32_t addr = 0xC0000000; addr < initially_mapped; addr += 4096) {

@@ -7,7 +7,7 @@ struct scoped_intlock {
 public:
     inline scoped_intlock() {
         asm volatile("pushf ; pop %0" : "=rm" (m_flags) : /* no input */ : "memory");
-        asm volatile("cli");
+        asm volatile("cli" ::: "memory");
     }
     inline ~scoped_intlock() {
         if (m_flags & (1 << 9)) {

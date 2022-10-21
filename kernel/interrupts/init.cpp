@@ -102,6 +102,10 @@ void interrupts::initialize() {
 
     idtr.address = reinterpret_cast<uint32_t>(idt_arr);
     idtr.size = sizeof(idt_arr) - 1;
+}
+
+void interrupts::start() {
+    sti();
     asm_lidt(&idtr);
 }
 
