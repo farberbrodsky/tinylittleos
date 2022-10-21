@@ -40,3 +40,6 @@ namespace std {
         return static_cast<remove_reference_t<T>&&>(t);
     }
 }
+
+// TODO TODO TODO remember to make use of __user
+# define __user __attribute__((noderef, address_space(1)))

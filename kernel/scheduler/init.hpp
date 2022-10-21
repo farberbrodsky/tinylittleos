@@ -36,4 +36,7 @@ namespace scheduler {
     extern tss_entry global_tss;
 
     void initialize();
+    // for preemption locking
+    void preempt_up();
+    void preempt_down();
 }

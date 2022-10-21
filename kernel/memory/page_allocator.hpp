@@ -1,6 +1,6 @@
 #pragma once
 #include <kernel/util.hpp>
-#include <kernel/util/intlock.hpp>
+#include <kernel/util/lock.hpp>
 
 namespace memory {
     struct phys_t {

@@ -1,5 +1,6 @@
 #pragma once
 #include <kernel/util.hpp>
+#include <kernel/scheduler/init.hpp>
 
 // Scoped Interrupt Lock - saves interrupt flag and restores it
 struct scoped_intlock {
@@ -29,4 +30,33 @@ public:
     inline scoped_intlock &operator=(const scoped_intlock &other) = delete;
 private:
     reg_t m_flags;
+};
+
+// Scoped Preemption Lock - disables preemption within scope, may be nested
+struct scoped_preemptlock {
+public:
+    inline scoped_preemptlock() : m_moved {false} {
+        scheduler::preempt_up();
+    }
+    inline ~scoped_preemptlock() {
+        if (!m_moved) {
+            scheduler::preempt_down();
+        }
+    }
+
+    // move semantics
+    inline scoped_preemptlock(scoped_preemptlock&& other) : m_moved {false} {
+        other.m_moved = true;
+        // don't increase again
+    }
+    inline scoped_preemptlock &operator=(scoped_preemptlock&& other) {
+        m_moved = other.m_moved;
+        other.m_moved = true;
+        return *this;
+    }
+
+    scoped_preemptlock(const scoped_preemptlock &other) = delete;
+    inline scoped_preemptlock &operator=(const scoped_preemptlock &other) = delete;
+private:
+    bool m_moved;
 };

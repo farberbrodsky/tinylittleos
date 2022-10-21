@@ -2,7 +2,7 @@
 #include <kernel/devices/keyboard.hpp>
 #include <kernel/tty.hpp>
 #include <kernel/logging.hpp>
-#include <kernel/util/intlock.hpp>
+#include <kernel/util/lock.hpp>
 
 // 128 bits of is_down
 static uint32_t is_down[4];  // global
