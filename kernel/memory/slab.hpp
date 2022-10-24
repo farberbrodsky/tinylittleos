@@ -5,8 +5,9 @@
 
 namespace memory {
     // untyped slab allocator - used to not duplicate allocator code for the same size
+    // can be initialized statically because all fields need to be 0
     template <size_t N>
-    struct __slab_allocator {
+    struct untyped_slab_allocator {
         static_assert(N < 4000, "2 big 2 slab");
 
         // decide on page size
@@ -90,10 +91,11 @@ public:
         }
     };
 
+    // can be initialized statically because all fields need to be 0
     template <class T>
     struct slab_allocator {
     private:
-        __slab_allocator<sizeof(T)> internal;
+        untyped_slab_allocator<sizeof(T)> internal;
     public:
         template <class... Args>
         inline T *allocate(Args... args) {

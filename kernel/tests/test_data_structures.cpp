@@ -7,6 +7,8 @@
 #include <kernel/interrupts/init.hpp>
 #include <kernel/interrupts/pic.hpp>
 #include <kernel/util/ds/bitset.hpp>
+#include <kernel/util/ds/list.hpp>
+#include <kernel/util/ds/hashtable.hpp>
 
 static void test_bitset() {
     // create bitset on non-zeroed memory
@@ -35,6 +37,52 @@ static void test_bitset() {
     TINY_INFO("Pass test_bitset");
 }
 
+static void test_linked_list() {
+    struct A : ds::intrusive_doubly_linked_node<A> {
+        int m_x;
+        inline A(int x) : m_x(x) {};
+    };
+
+    A a(7);
+    A b(4);
+    A c(2);
+    A d(3);
+    A e(1);
+    a.add_after_self(&b);  // a, b
+    a.add_after_self(&c);  // a, c, b
+    c.add_after_self(&d);  // a, c, d, b
+    b.add_after_self(&e);  // a, c, d, b, e
+    a.unlink();            // e, c, d, b     (remember: circular)
+    int i = 1;
+    for (A &it : e) {
+        kassert(it.m_x == (i++));
+    }
+    kassert(i == 5);
+    // check that unlinked item is a singular list of itself
+    for (A &it : a) {
+        i = 1;
+        kassert(it.m_x == 7);
+    }
+    kassert(i == 1);
+
+    TINY_INFO("Pass test_linked_list");
+}
+
+static void test_hash_table() {
+    ds::hashtable<2> ht;
+
+    kassert(ht.lookup(1337) == nullptr);
+    ht.insert(123, (void *)456);
+    ht.insert(22, (void *)22);
+    ht.insert(13, (void *)37);
+    kassert(ht.lookup(13) == (void *)37);
+    ht.remove(22);
+    kassert(ht.lookup(22) == nullptr);
+    kassert(ht.lookup(123) == (void *)456);
+
+    TINY_INFO("Pass test_hash_table");
+}
+
 extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     serial::initialize();
 
@@ -47,6 +95,8 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     interrupts::start();
 
     test_bitset();
+    test_linked_list();
+    test_hash_table();
 
     // test done
     interrupts::cli();

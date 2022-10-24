@@ -1,7 +1,8 @@
 #pragma once
 #include <stdint.h>
 
-using size_t = uintptr_t;
+using ssize_t = int32_t;
+using size_t = uint32_t;
 using uint = unsigned int;
 using reg_t = size_t;
 void __kassert_fail_internal(const char *assertion, const char *file, uint line, const char *function);
@@ -33,6 +34,21 @@ inline void quality_debugging() {
 // TODO TODO TODO remember to make use of __user
 # define __user __attribute__((noderef, address_space(1)))
 
+// errno
+enum class errno : int {
+    ok = 0,
+    not_permitted = -1,  // EPERM
+    no_entry = -2,       // ENOENT
+    no_process = -3,     // ESRCH
+    interrupted = -4,    // EINTR
+    io_error = -5,       // EIO
+    no_memory = -12,     // ENOMEM
+    no_access = -13,     // EACCESS
+    exists = -17,        // EEXISTS
+    not_dir = -20,       // ENOTDIR
+    is_dir = -21,        // EISDIR
+};
+
 // C++ features
 
 // std::move
@@ -46,6 +62,7 @@ namespace std {
         return static_cast<remove_reference_t<T>&&>(t);
     }
 }
+
 // placement new
 inline void *operator new(size_t, void *p)     throw() { return p; }
 inline void *operator new[](size_t, void *p)   throw() { return p; }

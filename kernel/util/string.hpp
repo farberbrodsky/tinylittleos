@@ -5,19 +5,22 @@ int memcmp(const void *, const void *, size_t);
 void* memcpy(void *__restrict, const void *__restrict, size_t);
 void* memmove(void *, const void *, size_t);
 void* memset(void *, int, size_t);
+char* strcpy(char *, const char *);
 size_t strlen(const char *);
 
 struct string_buf {
-    const char *data;
+    const char *data;  // null terminated
     size_t length;
 
-    string_buf(const char *data) : data{data} {
+    inline string_buf(const char *data) : data{data} {
         length = strlen(data);
     }
-    string_buf(char *data) : string_buf{const_cast<const char *>(data)} {}
+    inline string_buf(char *data) : string_buf{const_cast<const char *>(data)} {}
 
-    string_buf(const char *data, size_t length) : data{data}, length{length} {}
-    string_buf(char *data, size_t length) : string_buf{const_cast<const char *>(data), length} {}
+    inline string_buf(const char *data, size_t length) : data{data}, length{length} {
+        kassert(data[length] == 0);
+    }
+    inline string_buf(char *data, size_t length) : string_buf{const_cast<const char *>(data), length} {}
 };
 
 using int_to_str_stack_buf = char[21];  // -2**63 with space for null byte in decimal

@@ -7,6 +7,7 @@
 #include <kernel/interrupts/init.hpp>
 #include <kernel/interrupts/pic.hpp>
 #include <kernel/scheduler/init.hpp>
+#include <kernel/fs/tar.hpp>
 
 extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     tty::initialize();
@@ -21,7 +22,8 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     interrupts::init_pic();
     interrupts::start();
 
-    scheduler::initialize();
+    fs::register_tar();
+    // scheduler::initialize();
 
     tty_driver::write("system up!\n");
     while (1) { asm volatile("hlt"); }

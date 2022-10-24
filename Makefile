@@ -1,4 +1,4 @@
-.PHONY: iso kernel qemu qemu-gdb qemu-kernel qemu-test clean
+.PHONY: iso kernel initrd qemu qemu-gdb qemu-kernel qemu-test clean
 
 iso: kernel
 	cp kernel/kernel.elf iso/boot/kernel.elf
@@ -13,7 +13,10 @@ iso: kernel
 				-o os.iso                       \
 				iso
 
-kernel:
+initrd:
+	$(MAKE) -C initrd
+
+kernel: initrd
 	$(MAKE) -C kernel testname=$(testname)
 
 qemu: iso
@@ -31,5 +34,6 @@ qemu-test: iso
 
 clean:
 	$(MAKE) clean -C kernel
+	$(MAKE) clean -C initrd
 	rm -f iso/boot/kernel.elf
 	rm -f os.iso

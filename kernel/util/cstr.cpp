@@ -49,3 +49,15 @@ void *memset(void *bufptr, int value, size_t size) {
         buf[i] = (unsigned char)value;
     return bufptr;
 }
+
+char *strcpy(char *dest, const char *src) {
+    char *tmp_dest = dest;
+
+    do {
+        *tmp_dest = *src;
+        ++src;
+        ++tmp_dest;
+    } while (*src != '\0');
+
+    return dest;
+}

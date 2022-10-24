@@ -61,9 +61,9 @@ static void test_slab() {
         }
     };
     static_assert(sizeof(weird) == 17, "packed struct");
-    static_assert(__slab_allocator<2049>::page_size == 32768, "slab allocator page size selection");
-    static_assert(__slab_allocator<2000>::page_size == 4096, "slab allocator page size selection");
-    static_assert(__slab_allocator<17>::page_size == 4096, "slab allocator page size selection");
+    static_assert(untyped_slab_allocator<2049>::page_size == 32768, "slab allocator page size selection");
+    static_assert(untyped_slab_allocator<2000>::page_size == 4096, "slab allocator page size selection");
+    static_assert(untyped_slab_allocator<17>::page_size == 4096, "slab allocator page size selection");
 
     slab_allocator<weird> alloc;
     weird *a = alloc.allocate(2222);
