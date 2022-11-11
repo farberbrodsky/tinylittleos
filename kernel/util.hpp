@@ -47,6 +47,9 @@ enum class errno : int {
     exists = -17,        // EEXISTS
     not_dir = -20,       // ENOTDIR
     is_dir = -21,        // EISDIR
+
+    // tinylittleos extensions
+    path_too_long = -1337,
 };
 
 // C++ features

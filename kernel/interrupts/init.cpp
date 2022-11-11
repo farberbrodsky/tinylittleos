@@ -112,10 +112,12 @@ void interrupts::start() {
 extern "C" void internal_interrupt_handler(interrupts::interrupt_args *arg) {
     // disable interrupts during interrupt
     scoped_intlock lock;
+    reg_t cr2;
+    asm volatile("movl %%cr2, %0" : "=r"(cr2));
 
     if (interrupt_handler_table[arg->interrupt_number] == nullptr) [[unlikely]] {
         using formatting::hex;
-        TINY_ERR("UNHANDLED INTERRUPT !!!\nNUM ", arg->interrupt_number, "\nEBP ", hex{arg->ebp}, "\nEDI ", hex{arg->edi}, "\nESI ", hex{arg->esi}, "\nEDX ", hex{arg->edx}, "\nECX ", hex{arg->ecx}, "\nEBX ", hex{arg->ebx}, "\nEAX ", hex{arg->eax}, "\nERROR CODE ", hex{arg->error_code}, "\nEIP ", hex{arg->eip}, "\nCS ", hex{arg->cs}, "\nEFLAGS ", hex{arg->eflags});
+        TINY_ERR("UNHANDLED INTERRUPT !!!\nNUM ", arg->interrupt_number, "\nEBP ", hex{arg->ebp}, "\nEDI ", hex{arg->edi}, "\nESI ", hex{arg->esi}, "\nEDX ", hex{arg->edx}, "\nECX ", hex{arg->ecx}, "\nEBX ", hex{arg->ebx}, "\nEAX ", hex{arg->eax}, "\nCR2 ", hex{cr2}, "\nERROR CODE ", hex{arg->error_code}, "\nEIP ", hex{arg->eip}, "\nCS ", hex{arg->cs}, "\nEFLAGS ", hex{arg->eflags});
         kpanic("Unhandled interrupt: ", arg->interrupt_number, " error code ", arg->error_code, " (0x", hex{arg->error_code}, ')');
         return;
     }

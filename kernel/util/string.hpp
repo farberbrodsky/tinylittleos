@@ -9,7 +9,7 @@ char* strcpy(char *, const char *);
 size_t strlen(const char *);
 
 struct string_buf {
-    const char *data;  // null terminated
+    const char *data;  // may not be null terminated
     size_t length;
 
     inline string_buf(const char *data) : data{data} {
@@ -17,9 +17,7 @@ struct string_buf {
     }
     inline string_buf(char *data) : string_buf{const_cast<const char *>(data)} {}
 
-    inline string_buf(const char *data, size_t length) : data{data}, length{length} {
-        kassert(data[length] == 0);
-    }
+    inline string_buf(const char *data, size_t length) : data{data}, length{length} {}
     inline string_buf(char *data, size_t length) : string_buf{const_cast<const char *>(data), length} {}
 };
 

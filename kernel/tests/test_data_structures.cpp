@@ -9,6 +9,7 @@
 #include <kernel/util/ds/bitset.hpp>
 #include <kernel/util/ds/list.hpp>
 #include <kernel/util/ds/hashtable.hpp>
+#include <kernel/util/ds/refcount.hpp>
 
 static void test_bitset() {
     // create bitset on non-zeroed memory
@@ -83,6 +84,20 @@ static void test_hash_table() {
     TINY_INFO("Pass test_hash_table");
 }
 
+static void test_refcount() {
+    struct A : ds::intrusive_refcount {};
+    A a {};  // starts with 1 ref
+    a.take_ref();
+    a.take_ref();
+    kassert(a.release_ref() == false);
+    a.take_ref();
+    kassert(a.release_ref() == false);
+    kassert(a.release_ref() == false);
+    kassert(a.release_ref() == true);
+
+    TINY_INFO("Pass test_refcount");
+}
+
 extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     serial::initialize();
 
@@ -97,6 +112,7 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     test_bitset();
     test_linked_list();
     test_hash_table();
+    test_refcount();
 
     // test done
     interrupts::cli();

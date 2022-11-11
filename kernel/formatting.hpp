@@ -67,6 +67,47 @@ namespace formatting {
             G(set_color);
         }
 
+        static void _write(errno e) {
+            switch (e) {
+                case errno::ok:
+                    _write("errno::ok");
+                    break;
+                case errno::not_permitted:
+                    _write("errno::not_permitted");
+                    break;
+                case errno::no_entry:
+                    _write("errno::no_entry");
+                    break;
+                case errno::no_process:
+                    _write("errno::no_process");
+                    break;
+                case errno::interrupted:
+                    _write("errno::interrupted");
+                    break;
+                case errno::io_error:
+                    _write("errno::io_error");
+                    break;
+                case errno::no_memory:
+                    _write("errno::no_memory");
+                    break;
+                case errno::no_access:
+                    _write("errno::no_access");
+                    break;
+                case errno::exists:
+                    _write("errno::exists");
+                    break;
+                case errno::not_dir:
+                    _write("errno::not_dir");
+                    break;
+                case errno::is_dir:
+                    _write("errno::is_dir");
+                    break;
+                case errno::path_too_long:
+                    _write("errno::path_too_long");
+                    break;
+            }
+        }
+
     public:
         // variadic version
         static inline void write() {}
