@@ -5,6 +5,7 @@
 #include <kernel/util/ds/list.hpp>
 #include <kernel/util/ds/hashtable.hpp>
 #include <kernel/logging.hpp>
+#include <kernel/tty.hpp>
 using namespace fs;
 
 memory::untyped_slab_allocator<PATH_NAME_MAX> path_name_alloc;
@@ -28,9 +29,21 @@ struct mount_point : ds::intrusive_doubly_linked_node<mount_point> {
 static memory::slab_allocator<mount_point> mount_point_alloc;
 static mount_point *first_mount_point = nullptr;
 
-inode::~inode() {}
+static ssize_t default_f_read(file_desc *, char *, size_t) {
+    kpanic("file read not defined");
+    return static_cast<ssize_t>(errno::not_permitted);
+}
+static ssize_t default_f_write(file_desc *, char *, size_t) {
+    kpanic("file write not defined");
+    return static_cast<ssize_t>(errno::not_permitted);
+}
 
-file_desc::~file_desc() {}
+file_desc::file_desc(inode *owner) : owner_inode(owner), f_mode(0), f_pos(0), f_read(default_f_read), f_write(default_f_write) {
+    owner->take_ref();
+}
+file_desc::~file_desc() {
+    owner_inode->release_ref();
+}
 
 vfs::~vfs() {}
 
@@ -56,7 +69,7 @@ void fs::mount(string_buf canonical_path, vfs *fs) {
 
 // either from hashtable (if possible) or allocate new
 // also takes reference to it
-static inode *get_inode_struct(vfs *fs, uint32_t i_num) {
+static inode *get_inode_struct(vfs *fs, uint32_t i_num, inode *parent) {
     ds::hashtable<256> *ht = reinterpret_cast<ds::hashtable<256> *>(fs->__hashtable);
 
     inode *result = reinterpret_cast<inode *>(ht->lookup(i_num));
@@ -66,7 +79,7 @@ static inode *get_inode_struct(vfs *fs, uint32_t i_num) {
         result->take_ref();
     } else {
         // need to allocate inode struct
-        result = fs->alloc_inode_struct(i_num);  // (comes with 1 reference as needed)
+        result = fs->alloc_inode_struct(i_num, parent);  // (comes with 1 reference as needed)
         fs->read_inode_disk(result);  // TODO make this asynchronous and return a non-ready inode struct
         ht->insert(i_num, result);
     }
@@ -74,12 +87,20 @@ static inode *get_inode_struct(vfs *fs, uint32_t i_num) {
     return result;
 }
 
-void fs::release_inode_struct(inode *i) {
-    if (i->release_ref()) {
-        ds::hashtable<256> *ht = reinterpret_cast<ds::hashtable<256> *>(i->owner_fs->__hashtable);
-        ht->remove(i->i_num);
-        i->owner_fs->free_inode_struct(i);
+void fs::inode::release(inode *obj) {
+    if (obj->release_ref()) {
+        ds::hashtable<256> *ht = reinterpret_cast<ds::hashtable<256> *>(obj->owner_fs->__hashtable);
+        ht->remove(obj->i_num);
+        obj->owner_fs->free_inode_struct(obj);
     }
+}
+
+void fs::take_parent_struct(inode *i) {
+    if (i->i_parent_ref) i->i_parent_ref->take_ref();
+}
+
+void fs::release_parent_struct(inode *i) {
+    if (i->i_parent_ref) inode::release(i->i_parent_ref);
 }
 
 errno fs::traverse(string_buf path, inode *&result) {
@@ -154,15 +175,21 @@ errno fs::traverse(string_buf path, inode *&result) {
         string_buf name_buf { path.data, until_slash };
         errno e = curr_inode->lookup(name_buf, found_i);
 
-        // release curr_inode (unless it is root)
-        if (curr_inode->i_num != root_inode_num) {
-            release_inode_struct(curr_inode);
-        }
-
         if (e != errno::ok) {
+            // release curr_inode (unless it is root)
+            if (curr_inode->i_num != root_inode_num) {
+                inode::release(curr_inode);
+            }
             return e;
         }
-        curr_inode = get_inode_struct(fs, found_i);
+
+        inode *prev_inode = curr_inode;
+        curr_inode = get_inode_struct(fs, found_i, prev_inode);
+
+        // release prev_inode (unless it is root)
+        if (prev_inode->i_num != root_inode_num) {
+            inode::release(prev_inode);
+        }
 
         // remove from remaining text
         path.data += until_slash;
@@ -171,6 +198,21 @@ errno fs::traverse(string_buf path, inode *&result) {
 
     result = curr_inode;
     return errno::ok;
+}
+
+static memory::slab_allocator<file_desc> file_desc_alloc;
+
+errno inode::open(file_desc *&result) {
+    file_desc *f = file_desc_alloc.allocate(this);
+    set_file_methods(f);
+    result = f;
+    return errno::ok;
+}
+
+void fs::file_desc::release(file_desc *obj) {
+    if (obj->release_ref()) {
+        file_desc_alloc.free(obj);
+    }
 }
 
 // initialization

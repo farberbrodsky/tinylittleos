@@ -35,7 +35,7 @@ inline void quality_debugging() {
 # define __user __attribute__((noderef, address_space(1)))
 
 // errno
-enum class errno : int {
+enum class errno : ssize_t {
     ok = 0,
     not_permitted = -1,  // EPERM
     no_entry = -2,       // ENOENT

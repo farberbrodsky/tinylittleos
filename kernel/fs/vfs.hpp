@@ -35,11 +35,17 @@ namespace fs {
     inline uint16_t S_IWOTH = 0000002;  // other-write
     inline uint16_t S_IXOTH = 0000001;  // other-exec
 
+    struct inode;
+    struct file_desc;
+    struct vfs;
+
     // the in-memory representation of a file or directory
     // kernel uses inode structs to traverse directories
     // root inode must be in memory, other inodes can be freed
+    // implementors MUST call take_parent_struct(this) and release_parent_struct(this)
     struct inode : ds::intrusive_refcount {
         vfs *owner_fs;
+        inode *i_parent_ref;
         uint16_t i_mode;
         uint32_t i_uid;
         uint32_t i_gid;
@@ -55,47 +61,60 @@ namespace fs {
         virtual errno lookup(string_buf name, uint32_t &found_i) = 0;
         virtual errno create(string_buf name, uint16_t mode, uint32_t &new_i) = 0;
         virtual errno unlink(string_buf name) = 0;
+        // set the methods (f_read, f_write) for a file
+        virtual void set_file_methods(file_desc *);
 
-        inline inode(vfs *owner) : owner_fs(owner) {}
+        errno open(file_desc *&result);
+
+        static void release(inode *obj);
+
     protected:
-        // do not call destructor directly
-        ~inode();
+        // do not call constructor directly
+        inline inode(vfs *owner, inode *parent) : owner_fs(owner), i_parent_ref(parent) {}
     };
 
-    // reduces refcount and calls free_inode_struct within filesystem if necessary
-    void release_inode_struct(inode *i);
+    // MUST be called in constructor and destructor
+    void take_parent_struct(inode *i);
+    void release_parent_struct(inode *i);
 
     // file_desc->f_mode flags
-
     inline uint16_t FMODE_READ  = 0b01;
     inline uint16_t FMODE_WRITE = 0b10;
 
     // an open file description, which may have several file descriptors in processes
     // holds reference to inode
-    struct file_desc : ds::intrusive_refcount {
+    struct file_desc final : ds::intrusive_refcount {
         inode *owner_inode;
-        uint32_t f_parent_inode_num;  // may be different even if inode is the same due to hardlinks
-
         uint16_t f_mode;
         uint64_t f_pos;
 
         // files only
-        virtual ssize_t read(char *buf, size_t count) = 0;
-        virtual ssize_t write(char *buf, size_t count) = 0;
+        ssize_t (*f_read)(file_desc *self, char *buf, size_t count);
+        inline ssize_t read(char *buf, size_t count) {
+            return this->f_read(this, buf, count);
+        }
+
+        ssize_t (*f_write)(file_desc *self, char *buf, size_t count);
+        inline ssize_t write(char *buf, size_t count) {
+            return this->f_write(this, buf, count);
+        }
         // directories only
         // virtual void iterate() = 0;  // for implementing getdents
 
-        // takes reference to owner inode
-        inline file_desc(inode *owner) : owner_inode(owner) { owner->take_ref(); }
-    protected:
-        // releases reference to owner inode, do not call directly
+        static void release(file_desc *obj);
+
+        // takes reference to owner inode - should NOT be called directly
+        file_desc(inode *owner);
         ~file_desc();
     };
+
+    // call to release a reference to a file desc
+    void release_file_struct(file_desc *f);
 
     struct vfs {
         // in-memory
         virtual inode *alloc_root_inode_struct() = 0;
-        virtual inode *alloc_inode_struct(uint32_t i_num) = 0;
+        virtual inode *alloc_inode_struct(uint32_t i_num, inode *parent) = 0;
         virtual void free_inode_struct(inode *) = 0;
         // disk
         virtual void read_inode_disk(inode *) = 0;

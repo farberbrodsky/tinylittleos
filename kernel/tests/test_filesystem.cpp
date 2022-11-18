@@ -24,26 +24,37 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
 
     fs::register_tar();
     fs::inode *a;
+    fs::file_desc *f;
+    char buf[1024];
 
     errno e = fs::traverse("/hello.txt", a);
     kassert(e == errno::ok);
     serial_driver::write("hello.txt ", a->i_num, '\n');
-    release_inode_struct(a);
+    e = a->open(f);
+    kassert(e == errno::ok);
+    kassert(f->get_rc_for_test() == 1);
+    kassert(a->get_rc_for_test() == 2);
+    ssize_t read_len = f->read(buf, 1024);
+    kassert(read_len > 0);
+    fs::file_desc::release(f);
+    kassert(a->get_rc_for_test() == 1);
+    TINY_INFO("contents: ", buf);
+    fs::inode::release(a);
 
     e = fs::traverse("/world.txt", a);
     kassert(e == errno::ok);
     serial_driver::write("world.txt ", a->i_num, '\n');
-    release_inode_struct(a);
+    fs::inode::release(a);
 
     e = fs::traverse("/foo/bar.txt", a);
     kassert(e == errno::ok);
     serial_driver::write("/foo/bar.txt ", a->i_num, '\n');
-    release_inode_struct(a);
+    fs::inode::release(a);
 
     e = fs::traverse("/foo", a);
     kassert(e == errno::ok);
     serial_driver::write("/foo ", a->i_num, '\n');
-    release_inode_struct(a);
+    fs::inode::release(a);
 
     e = fs::traverse("/does/not/exist", a);
     kassert(e == errno::no_entry);

@@ -85,7 +85,7 @@ static errno tar_lookup_by_index(char *archive, uint32_t inode, size_t &filename
 
 struct vfs_tar : public vfs {
     virtual inode *alloc_root_inode_struct() override;
-    virtual inode *alloc_inode_struct(uint32_t) override;
+    virtual inode *alloc_inode_struct(uint32_t, inode *) override;
     virtual void free_inode_struct(inode *) override;
     virtual void read_inode_disk(inode *) override;
     virtual void write_inode_disk(inode *) override;
@@ -100,18 +100,14 @@ struct inode_tar : public inode {
     virtual errno lookup(string_buf name, uint32_t &found_i) override;
     virtual errno create(string_buf name, uint16_t mode, uint32_t &new_i) override;
     virtual errno unlink(string_buf name) override;
+    virtual void set_file_methods(file_desc *) override;
 
     char *m_contents;            // start of contents in tar - header is 512 before that
+    uint32_t m_contents_length;  // file length
     uint32_t m_filename_length;  // how much of filename is relevant
 
-    inode_tar(vfs *owner);
+    inode_tar(vfs *owner, inode *parent_ref);
     ~inode_tar();
-};
-
-struct file_desc_tar : public file_desc {
-    virtual ssize_t read(char *buf, size_t count) override;
-    virtual ssize_t write(char *buf, size_t count) override;
-    ~file_desc_tar();
 };
 
 static memory::slab_allocator<inode_tar> inode_alloc;
@@ -124,13 +120,13 @@ vfs_tar::vfs_tar(char *archive) : m_archive(archive) {}
 vfs_tar::~vfs_tar() {}
 
 inode *vfs_tar::alloc_root_inode_struct() {
-    inode *result = inode_alloc.allocate(this);
+    inode *result = inode_alloc.allocate(this, nullptr);
     result->i_num = root_inode;
     return result;
 }
 
-inode *vfs_tar::alloc_inode_struct(uint32_t i_num) {
-    inode *result = inode_alloc.allocate(this);
+inode *vfs_tar::alloc_inode_struct(uint32_t i_num, inode *parent_ref) {
+    inode *result = inode_alloc.allocate(this, parent_ref);
     result->i_num = i_num;
     return result;
 }
@@ -142,8 +138,7 @@ void vfs_tar::free_inode_struct(inode *node) {
 void vfs_tar::read_inode_disk(inode *node) {
     inode_tar *cast_node = static_cast<inode_tar *>(node);
     uint32_t number = node->i_num;
-    uint32_t _file_len;
-    tar_lookup_by_index(m_archive, number, cast_node->m_filename_length, cast_node->m_contents, _file_len);
+    tar_lookup_by_index(m_archive, number, cast_node->m_filename_length, cast_node->m_contents, cast_node->m_contents_length);
 }
 
 void vfs_tar::write_inode_disk(inode *) {
@@ -158,8 +153,12 @@ void vfs_tar::delete_inode_disk(inode *) {
 // inode definitions
 
 
-inode_tar::inode_tar(vfs *owner) : inode(owner), m_contents(nullptr) {}
-inode_tar::~inode_tar() {}
+inode_tar::inode_tar(vfs *owner, inode *parent) : inode(owner, parent), m_contents(nullptr) {
+    take_parent_struct(this);
+}
+inode_tar::~inode_tar() {
+    release_parent_struct(this);
+}
 
 errno inode_tar::lookup(string_buf name_arg, uint32_t &found_i) {
     string_buf my_file_name(static_cast<char *>(nullptr), 0);
@@ -230,18 +229,28 @@ errno inode_tar::unlink(string_buf) {
     return errno::not_permitted;
 }
 
+static ssize_t tar_read(file_desc *self, char *buf, size_t count) {
+    inode_tar *i = static_cast<inode_tar *>(self->owner_inode);
 
-// file desc definitions
+    if (self->f_pos >= i->m_contents_length) return 0;
 
+    if ((self->f_pos + count) > i->m_contents_length) {
+        count = i->m_contents_length - self->f_pos;
+    }
 
-ssize_t file_desc_tar::read(char *, size_t) {
-    kpanic("a"); // TODO
-    return (int)errno::not_permitted;
+    memcpy(buf, i->m_contents + self->f_pos, count);
+    self->f_pos += count;
+
+    return count;
 }
 
-ssize_t file_desc_tar::write(char *, size_t) {
-    kpanic("a"); // TODO
-    return (int)errno::not_permitted;
+static ssize_t tar_write(file_desc *, char *, size_t) {
+    return static_cast<ssize_t>(errno::not_permitted);
+}
+
+void inode_tar::set_file_methods(file_desc *f) {
+    f->f_read = tar_read;
+    f->f_write = tar_write;
 }
 
 static char static_vfs_allocation[sizeof(vfs_tar)];
