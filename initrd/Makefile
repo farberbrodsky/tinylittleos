@@ -1,4 +1,4 @@
-OBJECTS = hello.txt world.txt foo/bar.txt
+OBJECTS = hello.txt world.txt foo/bar.txt splash.txt
 CPPFLAGS = -m32 -std=c++20 -Wall -Wextra -ffreestanding -fno-exceptions -fno-rtti -O2 -fno-plt -fno-pic -I.. -I/usr/include
 CC = gcc
 

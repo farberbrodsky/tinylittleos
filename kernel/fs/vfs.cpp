@@ -157,6 +157,8 @@ errno fs::traverse(string_buf path, inode *&result) {
     kassert(curr_inode != nullptr);
 
     // destructively parse path and traverse inodes
+    path.data += best_mnt_path_length;
+    path.length -= best_mnt_path_length;
     while (path.length != 0) {
         if (path.data[0] == '/') {
             // ignore slashes

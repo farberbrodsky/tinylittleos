@@ -2,5 +2,5 @@
 #include <kernel/fs/vfs.hpp>
 
 namespace fs {
-    void register_tar();
+    void register_initrd(string_buf path);
 }

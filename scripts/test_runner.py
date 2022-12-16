@@ -16,3 +16,4 @@ with open("test.txt", "rb") as f:
         print("Test failed")
         f.seek(0, 0)
         print(f.read().decode("utf-8"))
+        exit(1)

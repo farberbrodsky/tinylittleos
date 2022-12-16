@@ -22,7 +22,7 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     interrupts::init_pic();
     interrupts::start();
 
-    fs::register_tar();
+    fs::register_initrd("/");
     fs::inode *a;
     fs::file_desc *f;
     char buf[1024];

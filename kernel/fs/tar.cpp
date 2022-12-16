@@ -255,7 +255,7 @@ void inode_tar::set_file_methods(file_desc *f) {
 
 static char static_vfs_allocation[sizeof(vfs_tar)];
 
-void fs::register_tar() {
+void fs::register_initrd(string_buf path) {
     vfs_tar *fs = new (static_vfs_allocation) vfs_tar(&_initrd);
-    fs::mount("/", fs);
+    fs::mount(path, fs);
 }
