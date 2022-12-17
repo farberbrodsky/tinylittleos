@@ -8,5 +8,6 @@ extern "C" {
     void asm_lidt(void *addr);
     void asm_set_cr3(void *addr);
     void asm_flush_tss();
+    void asm_enter_task(void *stack);
     void asm_enter_usermode(void *func, void *esp);
 }

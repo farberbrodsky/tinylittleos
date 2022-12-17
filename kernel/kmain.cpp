@@ -28,7 +28,8 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     fs::register_initrd("/initrd");
     show_splash();
 
-    while (1) { asm volatile("hlt"); }
+    scheduler::initialize();  // should not return
+    kpanic("scheduler::initialize returned");
 }
 
 static void show_splash() {

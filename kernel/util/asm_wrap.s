@@ -112,3 +112,20 @@ asm_enter_usermode:
     mov ebp, 0
 
     iret
+
+; asm_enter_task - enter task with iret
+; stack: [esp + 4] stack address to enter at
+;        [esp    ] the return address
+global asm_enter_task
+asm_enter_task:
+    mov esp, [esp + 4]
+
+    pop ebp
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    add esp, 8
+    iretd

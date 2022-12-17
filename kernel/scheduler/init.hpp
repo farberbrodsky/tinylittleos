@@ -1,5 +1,7 @@
 #pragma once
 #include <kernel/util.hpp>
+#include <kernel/util/ds/list.hpp>
+#include <kernel/interrupts/init.hpp>
 
 namespace scheduler {
     struct __attribute__((packed)) tss_entry {
@@ -33,9 +35,19 @@ namespace scheduler {
         uint16_t iomap_base;
     };
 
+    // tasks are in linked lists managed by scheduler
+    struct task : ds::intrusive_doubly_linked_node<task> {
+        uint32_t pid;
+        char *stack;
+        char *stack_pointer;  // should have an interrupts::interrupt_args at the top
+    };
+
     extern tss_entry global_tss;
 
     void initialize();
+
+    void timeslice_passed(interrupts::interrupt_args &resume_info);  // called from interrupt context
+
     // for preemption locking
     void preempt_up();
     void preempt_down();

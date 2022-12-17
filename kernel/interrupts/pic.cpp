@@ -3,6 +3,7 @@
 #include <kernel/interrupts/pic.hpp>
 #include <kernel/util/asm_wrap.hpp>
 #include <kernel/devices/keyboard.hpp>
+#include <kernel/scheduler/init.hpp>
 
 static constexpr unsigned short PIC1 = 0x20; // IO base address for master PIC
 static constexpr unsigned short PIC2 = 0xA0; // IO base address for slave PIC
@@ -23,7 +24,10 @@ static void send_end_of_interrupt(uint interrupt) {
 static void pic_interrupt_handler(interrupts::interrupt_args &args) {
     uint num = args.interrupt_number - 0x20;
     if (num == 0) {
-        // TODO timer interrupt handler
+        // timer interrupt handler - should run roughly 1000 times per second
+        send_end_of_interrupt(num);
+        scheduler::timeslice_passed(args);  // NOTE: might not return
+        return;
     } else if (num == 1) {
         unsigned char scan_code = asm_inb(KB_PORT);
         devices::keyboard::on_scan_code(scan_code);
@@ -58,4 +62,10 @@ void interrupts::init_pic() {
     // set masks - 1 is ignored
     asm_outb(PIC1_DATA, 0xfc);  // master PIC - allow only timer and keyboard
     asm_outb(PIC2_DATA, 0xff);  // slave PIC  - block all
+
+    // setup timer
+    int divisor = 1193180 / 1000;  // 1000Hz
+    asm_outb(0x43, 52);
+    asm_outb(0x40, divisor & 0xFF);
+    asm_outb(0x40, divisor >> 8);
 }
