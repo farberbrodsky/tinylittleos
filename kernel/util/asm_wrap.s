@@ -120,6 +120,8 @@ global asm_enter_task
 asm_enter_task:
     mov esp, [esp + 4]
 
+    pop eax
+    mov cr3, eax
     pop ebp
     pop edi
     pop esi

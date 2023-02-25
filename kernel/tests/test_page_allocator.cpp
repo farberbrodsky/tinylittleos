@@ -83,6 +83,30 @@ static void test_slab() {
     TINY_INFO("Pass test slab");
 }
 
+static void test_hmem() {
+    using namespace memory;
+    phys_t mem1 = memory::hmem_alloc_page();
+    phys_t mem2 = memory::hmem_alloc_page();
+    kassert(mem1.value() != mem2.value());
+    memory::hmem_free_page(mem1);
+    phys_t mem3 = memory::hmem_alloc_page();
+    kassert(mem3.value() == mem1.value());  // assumes linked list works as it does
+    scoped_hmem_mapping map1 { mem3 };
+    scoped_hmem_mapping map2 { mem2 };
+    kassert(map1.value() != map2.value());
+    memset(map1.value(), 0x41, 4096);
+    memset(map2.value(), 0x42, 4096);
+}
+
+static void test_main() {
+    test_hmem();
+
+    // test done
+    interrupts::cli();
+    serial_driver::write("TEST_SUCCESS");
+    while (1) { asm volatile("hlt"); }
+}
+
 extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     serial::initialize();
 
@@ -98,8 +122,11 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     test_big();
     test_slab();
 
-    // test done
-    interrupts::cli();
-    serial_driver::write("TEST_SUCCESS");
-    while (1) { asm volatile("hlt"); }
+    // the rest of the test must run in a task
+    scheduler::initialize();
+    scheduler::task *test_hmem_task = scheduler::task::allocate(test_main);
+    scheduler::link_task(test_hmem_task);
+    scheduler::task::release(test_hmem_task);
+    scheduler::start();
+    kpanic("scheduler::start returned");
 }

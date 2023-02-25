@@ -2,6 +2,7 @@
 #include <kernel/util.hpp>
 #include <kernel/util/ds/list.hpp>
 #include <kernel/interrupts/init.hpp>
+#include <kernel/util/ds/refcount.hpp>
 
 namespace scheduler {
     struct __attribute__((packed)) tss_entry {
@@ -36,15 +37,46 @@ namespace scheduler {
     };
 
     // tasks are in linked lists managed by scheduler
-    struct task : ds::intrusive_doubly_linked_node<task> {
+    struct task final : ds::intrusive_doubly_linked_node<task>, ds::intrusive_refcount {
         uint32_t pid;
-        char *stack;
         char *stack_pointer;  // should have an interrupts::interrupt_args at the top
+
+        // create a task, to link it later
+        // do NOT call from interrupt context
+        static task *allocate(void (*run)(void));
+        // call to release a reference to a task
+        static void release(task *obj);
+
+    public:
+        // please only construct using allocate
+        task(uint32_t _pid, char *_stack_pointer);
     };
 
-    extern tss_entry global_tss;
+    // information which is at the highest address of the stack, and is only needed within the task
+    struct task_internal {
+        char *hmem_end;
+    };
 
+    inline task_internal *get_current_task_internal(void)
+    {
+        task_internal *current;
+        asm volatile("andl %%esp,%0; ":"=r" (current) : "0" (~8191UL));
+        // Do NOT change without changing create_kernel_stack
+        // Assumes stack address is aligned to 8192
+        return current;
+    }
+
+    extern tss_entry global_tss;
+    extern task *volatile current_task;
+
+    // initialize scheduling
     void initialize();
+    // enter current task when ready
+    void start();
+    // add the task to the scheduler
+    void link_task(task *t);
+    // remove the task from the scheduler
+    void unlink_task(task *t);
 
     void timeslice_passed(interrupts::interrupt_args &resume_info);  // called from interrupt context
 

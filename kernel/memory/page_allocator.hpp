@@ -6,12 +6,12 @@ namespace memory {
     struct phys_t {
     public:
         // normal constructor
-        inline constexpr phys_t() : m_addr(0) {}
+        inline constexpr phys_t(void) : m_addr(0) {}
         // EXPLICIT constructor from uint32_t when needed
         inline constexpr explicit phys_t(uint32_t addr) : m_addr(addr) {}
 
         // copy constructors
-        inline constexpr explicit phys_t(const phys_t &other) : m_addr(other.m_addr) {}
+        inline constexpr phys_t(const phys_t &other) : m_addr(other.m_addr) {}
         inline constexpr phys_t &operator=(const phys_t &other) {
             m_addr = other.m_addr;
             return *this;
@@ -71,6 +71,34 @@ namespace memory {
     void kmem_free_8k(void *ptr);
     void kmem_free_16k(void *ptr);
     void kmem_free_32k(void *ptr);
+
+    // used when creating a new process
+    reg_t new_page_directory(void);
+
+    // hmem has only one allocation size (4k), and is based on a simple linked list
+    // do NOT call from interrupt context!
+    phys_t hmem_alloc_page();
+    void hmem_free_page(phys_t addr);
+
+    // maps an hmem mapping into view
+    struct scoped_hmem_mapping {
+        scoped_hmem_mapping(phys_t);
+        ~scoped_hmem_mapping();
+
+        // returns the address of the page in virtual memory
+        inline void *value() {
+            return m_virt;
+        }
+
+        // do not allow any sort of copying or moving
+        scoped_hmem_mapping(const scoped_hmem_mapping &other) = delete;
+        scoped_hmem_mapping(scoped_hmem_mapping &&other) = delete;
+        scoped_hmem_mapping &operator=(const scoped_hmem_mapping &other) = delete;
+        scoped_hmem_mapping &operator=(scoped_hmem_mapping &&other) = delete;
+
+    private:
+        void *m_virt;
+    };
 
     template <size_t N>
     inline void *kmem_alloc_pages() {

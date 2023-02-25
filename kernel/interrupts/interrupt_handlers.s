@@ -22,6 +22,8 @@ common_interrupt_handler:               ; the common parts of the generic interr
     push esi
     push edi
     push ebp
+    mov eax, cr3
+    push eax
 
     ; pass a parameter, which is a pointer to the stack structure passed
     push esp
@@ -35,6 +37,8 @@ common_interrupt_handler:               ; the common parts of the generic interr
     add esp, 4
 
     ; restore the registers
+    pop eax
+    mov cr3, eax
     pop ebp
     pop edi
     pop esi

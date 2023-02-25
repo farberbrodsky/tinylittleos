@@ -12,6 +12,28 @@
 
 static void show_splash();
 
+static void main_task() {
+    while (1) {
+        {
+            scoped_preemptlock lock;
+            tty_driver::write("hello!\n");
+        }
+        for (int i = 0; i < 300000; i++)
+            asm volatile("pause" ::: "memory");
+    }
+}
+
+static void second_task() {
+    while (1) {
+        {
+            scoped_preemptlock lock;
+            tty_driver::write("world!\n");
+        }
+        for (int i = 0; i < 1000000; i++)
+            asm volatile("pause" ::: "memory");
+    }
+}
+
 extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     tty::initialize();
     serial::initialize();
@@ -28,8 +50,16 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     fs::register_initrd("/initrd");
     show_splash();
 
-    scheduler::initialize();  // should not return
-    kpanic("scheduler::initialize returned");
+    scheduler::initialize();
+    scheduler::task *main = scheduler::task::allocate(main_task);
+    scheduler::task *second = scheduler::task::allocate(second_task);
+    kassert(main != nullptr && second != nullptr);
+    scheduler::link_task(main);
+    scheduler::task::release(main);
+    scheduler::link_task(second);
+    scheduler::task::release(second);
+    scheduler::start();
+    kpanic("scheduler::start returned");
 }
 
 static void show_splash() {

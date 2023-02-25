@@ -9,12 +9,18 @@ using pid_t = uint32_t;
 
 void __kassert_fail_internal(const char *assertion, const char *file, uint line, const char *function);
 
-#define kassert(expr) __kassert_internal(expr, #expr, __FILE__, __LINE__, __PRETTY_FUNCTION__);
+#define kassert(expr) do { __kassert_internal(expr, #expr, __FILE__, __LINE__, __PRETTY_FUNCTION__); } while (0);
 inline void __kassert_internal(bool expr, const char *assertion, const char *file, uint line, const char *function) {
     if (!expr) [[unlikely]] {
         __kassert_fail_internal(assertion, file, line, function);
     }
 }
+
+namespace interrupts {
+    bool is_interrupt_context();
+}
+#define kassert_not_interrupt kassert(!interrupts::is_interrupt_context());
+#define kassert_is_interrupt kassert(interrupts::is_interrupt_context());
 
 #define kpanic(msg...) do {                                           \
     __kpanic_internal_before();                                       \
@@ -22,7 +28,7 @@ inline void __kassert_internal(bool expr, const char *assertion, const char *fil
     __kpanic_internal_after(__FILE__, __LINE__, __PRETTY_FUNCTION__); \
 } while (0);
 
-void __kpanic_internal_before(void);
+void __kpanic_internal_before();
 void __kpanic_internal_after(const char *file, uint line, const char *function);
 
 inline void quality_debugging() {
@@ -58,9 +64,9 @@ enum class errno : ssize_t {
 
 // std::move
 namespace std {
-    template <class T> struct remove_reference      { typedef T type; };
-    template <class T> struct remove_reference<T&>  { typedef T type; };
-    template <class T> struct remove_reference<T&&> { typedef T type; };
+    template <class T> struct remove_reference      { using type = T; };
+    template <class T> struct remove_reference<T&>  { using type = T; };
+    template <class T> struct remove_reference<T&&> { using type = T; };
     template <class T> using  remove_reference_t = typename remove_reference<T>::type;
     template <class T>
     inline constexpr remove_reference_t<T>&& move(T&& t) noexcept {
@@ -69,7 +75,7 @@ namespace std {
 }
 
 // placement new
-inline void *operator new(size_t, void *p)     throw() { return p; }
-inline void *operator new[](size_t, void *p)   throw() { return p; }
-inline void  operator delete  (void *, void *) throw() { };
-inline void  operator delete[](void *, void *) throw() { };
+inline void *operator new(size_t, void *p)     noexcept { return p; }
+inline void *operator new[](size_t, void *p)   noexcept { return p; }
+inline void  operator delete  (void *, void *) noexcept { };
+inline void  operator delete[](void *, void *) noexcept { };

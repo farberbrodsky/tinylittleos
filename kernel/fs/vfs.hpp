@@ -101,15 +101,13 @@ namespace fs {
         // directories only
         // virtual void iterate() = 0;  // for implementing getdents
 
+        // call to release a reference to a file desc
         static void release(file_desc *obj);
 
         // takes reference to owner inode - should NOT be called directly
         file_desc(inode *owner);
         ~file_desc();
     };
-
-    // call to release a reference to a file desc
-    void release_file_struct(file_desc *f);
 
     struct vfs {
         // in-memory

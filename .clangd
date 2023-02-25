@@ -1,0 +1,6 @@
+Index:
+    Background: Build
+
+Diagnostics:
+    ClangTidy:
+        Add: cppcoreguidelines-*,-cppcoreguidelines-avoid-c-arrays,-cppcoreguidelines-avoid-magic-numbers

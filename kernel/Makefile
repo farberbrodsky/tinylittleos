@@ -17,7 +17,6 @@ all: kernel.elf
 
 kernel.elf: $(OBJECTS) link.ld
 	ld -T link.ld -melf_i386 $(OBJECTS) -o kernel.elf
-	grub-file --is-x86-multiboot kernel.elf
 
 crtbegin.o crtend.o:
 	OBJ=`$(CC) $(CPPFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@

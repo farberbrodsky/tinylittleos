@@ -70,6 +70,8 @@ static_assert(sizeof(idt_entry) == 8, "wrong idt entry size");
 __attribute__((aligned(0x10)))
 idt_entry idt_arr[256];  // global
 
+static int interrupt_context_depth;
+
 struct {
     unsigned short size;
     unsigned int address;
@@ -102,24 +104,36 @@ void interrupts::initialize() {
 
     idtr.address = reinterpret_cast<uint32_t>(idt_arr);
     idtr.size = sizeof(idt_arr) - 1;
+    interrupt_context_depth = 0;
 }
 
 void interrupts::start() {
-    sti();
     asm_lidt(&idtr);
+    sti();
+}
+
+void interrupts::reduce_interrupt_depth() {
+    int dep = __atomic_sub_fetch(&interrupt_context_depth, 1, __ATOMIC_SEQ_CST);
+    kassert(dep >= 0);
+}
+
+bool interrupts::is_interrupt_context() {
+    return interrupt_context_depth != 0;
 }
 
 extern "C" void internal_interrupt_handler(interrupts::interrupt_args *arg) {
-    // disable interrupts during interrupt
-    scoped_intlock lock;
-    reg_t cr2;
-    asm volatile("movl %%cr2, %0" : "=r"(cr2));
+    __atomic_add_fetch(&interrupt_context_depth, 1, __ATOMIC_SEQ_CST);
 
     if (interrupt_handler_table[arg->interrupt_number] == nullptr) [[unlikely]] {
+        reg_t cr2;
+        asm volatile("movl %%cr2, %0" : "=r"(cr2));
+
         using formatting::hex;
         TINY_ERR("UNHANDLED INTERRUPT !!!\nNUM ", arg->interrupt_number, "\nEBP ", hex{arg->ebp}, "\nEDI ", hex{arg->edi}, "\nESI ", hex{arg->esi}, "\nEDX ", hex{arg->edx}, "\nECX ", hex{arg->ecx}, "\nEBX ", hex{arg->ebx}, "\nEAX ", hex{arg->eax}, "\nCR2 ", hex{cr2}, "\nERROR CODE ", hex{arg->error_code}, "\nEIP ", hex{arg->eip}, "\nCS ", hex{arg->cs}, "\nEFLAGS ", hex{arg->eflags});
         kpanic("Unhandled interrupt: ", arg->interrupt_number, " error code ", arg->error_code, " (0x", hex{arg->error_code}, ')');
         return;
     }
     interrupt_handler_table[arg->interrupt_number](*arg);
+
+    kassert(__atomic_sub_fetch(&interrupt_context_depth, 1, __ATOMIC_SEQ_CST) >= 0);
 }
