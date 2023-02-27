@@ -103,3 +103,5 @@ isr_no_err_stub 44
 isr_no_err_stub 45
 isr_no_err_stub 46
 isr_no_err_stub 47
+
+isr_no_err_stub 128

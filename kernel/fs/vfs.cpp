@@ -29,11 +29,11 @@ struct mount_point : ds::intrusive_doubly_linked_node<mount_point> {
 static memory::slab_allocator<mount_point> mount_point_alloc;
 static mount_point *first_mount_point = nullptr;
 
-static ssize_t default_f_read(file_desc *, char *, size_t) {
+static ssize_t default_f_read(file_desc *, char *, size_t, uint64_t) {
     kpanic("file read not defined");
     return static_cast<ssize_t>(errno::not_permitted);
 }
-static ssize_t default_f_write(file_desc *, char *, size_t) {
+static ssize_t default_f_write(file_desc *, char *, size_t, uint64_t) {
     kpanic("file write not defined");
     return static_cast<ssize_t>(errno::not_permitted);
 }
@@ -43,6 +43,26 @@ file_desc::file_desc(inode *owner) : owner_inode(owner), f_mode(0), f_pos(0), f_
 }
 file_desc::~file_desc() {
     owner_inode->release_ref();
+}
+
+ssize_t file_desc::read(char *buf, size_t count) {
+    ssize_t res = this->f_read(this, buf, count, f_pos);
+    if (res >= 0)
+        f_pos += res;
+
+    return res;
+}
+
+ssize_t file_desc::pread(char *buf, size_t count, uint64_t pos) {
+    return this->f_read(this, buf, count, pos);
+}
+
+ssize_t file_desc::write(char *buf, size_t count) {
+    return this->f_write(this, buf, count, f_pos);
+}
+
+ssize_t file_desc::pwrite(char *buf, size_t count, uint64_t pos) {
+    return this->f_write(this, buf, count, pos);
 }
 
 vfs::~vfs() {}

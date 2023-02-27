@@ -408,7 +408,7 @@ static void kmem_buddy_new_no_alloc() {
     kmem_allocator.first_k32.next_k32 = &buddy_array[pos];
 }
 
-static void _map_page(void *virt, uint32_t pde_flags, uint32_t pte);
+static void _map_page(void *virt, uint32_t pde_flags, uint32_t pte, uint32_t *pd = first_page_directory);
 static void kmem_buddy_new() {
     kmem_buddy_new_no_alloc();
     size_t pos = buddy_array_pos - 1;
@@ -517,14 +517,14 @@ reg_t memory::new_page_directory() {
     return reinterpret_cast<reg_t>(phys_t::from_kmem(page_table).value());
 }
 
-static void _map_page(void *virt, uint32_t pde_flags, uint32_t pte) {
+static void _map_page(void *virt, uint32_t pde_flags, uint32_t pte, uint32_t *pd /* default first_page_directory*/) {
     scoped_intlock lock;  // block interrupts
     kassert(((uint32_t)virt & 0xFFF) == 0);  // make sure address is page aligned
 
     uint32_t dir_index = (uint32_t)virt >> 22;
     uint32_t tab_index = (uint32_t)virt >> 12 & 0x03FF;
 
-    uint32_t &dir_entry = first_page_directory[dir_index];
+    uint32_t &dir_entry = pd[dir_index];
     uint32_t *page_table;
 
     if (dir_entry & (uint32_t)page_flag::present) {
@@ -546,6 +546,18 @@ static void _map_page(void *virt, uint32_t pde_flags, uint32_t pte) {
         dir_entry = phys_t::from_kmem(page_table).value() | pde_flags;
         page_table[tab_index] = pte;
     }
+}
+
+void memory::map_user_page(void *virt, phys_t phys, bool writable) {
+    constexpr uint32_t prwr = (uint32_t)page_flag::present | (uint32_t)page_flag::write | (uint32_t)page_flag::user;
+    uint32_t pte = phys.value() | (uint32_t)page_flag::present | (uint32_t)page_flag::user;
+
+    if (writable)
+        pte |= (uint32_t)page_flag::write;
+
+    uint32_t cr3;
+    asm volatile("movl %%cr3, %0" : "=r"(cr3) ::);
+    _map_page(virt, prwr, pte, reinterpret_cast<uint32_t *>(phys_t(cr3).to_virt()));
 }
 
 // hmem linked list physical pages allocator

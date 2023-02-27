@@ -1,6 +1,8 @@
-Index:
-    Background: Build
+CompileFlags:
+    Add: [-xc++, -std=c++20, -m32, -Wall, -Wextra, -I.., -I../.., -I../../.., -ffreestanding]
 
 Diagnostics:
     ClangTidy:
-        Add: cppcoreguidelines-*,-cppcoreguidelines-avoid-c-arrays,-cppcoreguidelines-avoid-magic-numbers
+        Add: misc-*,cppcoreguidelines-*,-cppcoreguidelines-avoid-c-arrays,-cppcoreguidelines-avoid-magic-numbers
+
+    UnusedIncludes: Strict

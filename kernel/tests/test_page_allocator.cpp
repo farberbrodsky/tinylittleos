@@ -126,7 +126,6 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     scheduler::initialize();
     scheduler::task *test_hmem_task = scheduler::task::allocate(test_main);
     scheduler::link_task(test_hmem_task);
-    scheduler::task::release(test_hmem_task);
     scheduler::start();
     kpanic("scheduler::start returned");
 }

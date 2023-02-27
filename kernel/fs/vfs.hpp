@@ -89,15 +89,13 @@ namespace fs {
         uint64_t f_pos;
 
         // files only
-        ssize_t (*f_read)(file_desc *self, char *buf, size_t count);
-        inline ssize_t read(char *buf, size_t count) {
-            return this->f_read(this, buf, count);
-        }
+        ssize_t (*f_read)(file_desc *self, char *buf, size_t count, uint64_t pos);
+        ssize_t read(char *buf, size_t count);
+        ssize_t pread(char *buf, size_t count, uint64_t pos);
 
-        ssize_t (*f_write)(file_desc *self, char *buf, size_t count);
-        inline ssize_t write(char *buf, size_t count) {
-            return this->f_write(this, buf, count);
-        }
+        ssize_t (*f_write)(file_desc *self, char *buf, size_t count, uint64_t pos);
+        ssize_t write(char *buf, size_t count);
+        ssize_t pwrite(char *buf, size_t count, uint64_t pos);
         // directories only
         // virtual void iterate() = 0;  // for implementing getdents
 

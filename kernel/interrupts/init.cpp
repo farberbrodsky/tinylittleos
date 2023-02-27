@@ -54,6 +54,7 @@ extern "C" {
     extern char interrupt_handler_45;
     extern char interrupt_handler_46;
     extern char interrupt_handler_47;
+    extern char interrupt_handler_128;
 }
 
 struct __attribute__((packed)) idt_entry {
@@ -101,6 +102,11 @@ void interrupts::initialize() {
         idt_arr[i].reserved = 0;
         idt_arr[i].attributes = 0x8e;  // Interrupt Gate, not Trap Gate
     }
+    idt_arr[0x80].kernel_cs = 0x08;
+    idt_arr[0x80].isr_low  = reinterpret_cast<uint32_t>(&interrupt_handler_128) & 0xFFFF;
+    idt_arr[0x80].isr_high = reinterpret_cast<uint32_t>(&interrupt_handler_128) >> 16;
+    idt_arr[0x80].reserved = 0;
+    idt_arr[0x80].attributes = 0xee;  // Interrupt Gate, DPL=11
 
     idtr.address = reinterpret_cast<uint32_t>(idt_arr);
     idtr.size = sizeof(idt_arr) - 1;

@@ -229,22 +229,20 @@ errno inode_tar::unlink(string_buf) {
     return errno::not_permitted;
 }
 
-static ssize_t tar_read(file_desc *self, char *buf, size_t count) {
+static ssize_t tar_read(file_desc *self, char *buf, size_t count, uint64_t pos) {
     inode_tar *i = static_cast<inode_tar *>(self->owner_inode);
 
-    if (self->f_pos >= i->m_contents_length) return 0;
+    if (pos >= static_cast<uint64_t>(i->m_contents_length)) return 0;
 
-    if ((self->f_pos + count) > i->m_contents_length) {
-        count = i->m_contents_length - self->f_pos;
+    if ((pos + count) > static_cast<uint64_t>(i->m_contents_length)) {
+        count = i->m_contents_length - pos;
     }
 
-    memcpy(buf, i->m_contents + self->f_pos, count);
-    self->f_pos += count;
-
+    memcpy(buf, i->m_contents + pos, count);
     return count;
 }
 
-static ssize_t tar_write(file_desc *, char *, size_t) {
+static ssize_t tar_write(file_desc *, char *, size_t, uint64_t) {
     return static_cast<ssize_t>(errno::not_permitted);
 }
 

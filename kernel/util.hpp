@@ -55,6 +55,7 @@ enum class errno : ssize_t {
     exists = -17,        // EEXISTS
     not_dir = -20,       // ENOTDIR
     is_dir = -21,        // EISDIR
+    invalid = -22,       // EINVAL
 
     // tinylittleos extensions
     path_too_long = -1337,

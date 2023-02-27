@@ -13,7 +13,22 @@ static memory::slab_allocator<scheduler::task> task_allocator;
 
 scheduler::task *volatile scheduler::current_task = 0;
 
+[[noreturn]] static void enter_task(char *stack) {
+    scheduler::global_tss.esp0 = reinterpret_cast<reg_t>(stack) + sizeof(interrupts::interrupt_args);
+    asm_enter_task(stack);
+}
+
+char stack_free_stack[4096];  // stack used to free the stack
+
+extern "C" __attribute__((cdecl)) void _sched_final_free(char *free_stack, char *switch_stack) {
+    memory::kmem_free_4k(free_stack);
+    scheduler::preempt_down();  // worst case scenario: this task is already freed at the point of switch
+    enter_task(switch_stack);
+    __builtin_unreachable();
+}
+
 static void task_wrapper(void (*call)(void)) {
+    using namespace scheduler;
     asm volatile("sti" ::: "memory");
     // initialization
 
@@ -28,8 +43,23 @@ static void task_wrapper(void (*call)(void)) {
 
     call();
 
-    // finalization - free top page table
+    // finalization
+    preempt_up();  // during finalization, disable preemption
+    task *me = current_task;
+    current_task = me->get_next();
+    unlink_task(me);
+    task::release(me);
     memory::kmem_free_4k(hmem_mappings_page_table);
+
+    // call _sched_final_free from another stack (stack_free_stack)
+    char *my_stack = reinterpret_cast<char *>(get_current_task_internal());
+    *reinterpret_cast<reg_t *>(stack_free_stack + sizeof(stack_free_stack) -     sizeof(reg_t)) = reinterpret_cast<reg_t>(current_task->stack_pointer);
+    *reinterpret_cast<reg_t *>(stack_free_stack + sizeof(stack_free_stack) - 2 * sizeof(reg_t)) = reinterpret_cast<reg_t>(my_stack);
+
+    char *new_sp = stack_free_stack + sizeof(stack_free_stack) - 2 * sizeof(reg_t);
+    asm volatile("":::"memory");
+    asm volatile("mov %0, %%esp \n\t cld \n\t call _sched_final_free" :: "g" (new_sp) : "memory");
+    __builtin_unreachable();
 }
 
 // Creates a task which can be entered to run task_wrapper with main as the argument
@@ -67,11 +97,6 @@ void scheduler::task::release(task *obj) {
     if (obj->release_ref()) {
         task_allocator.free(obj);
     }
-}
-
-[[noreturn]] static void enter_task(char *stack) {
-    scheduler::global_tss.esp0 = reinterpret_cast<reg_t>(stack) + sizeof(interrupts::interrupt_args);
-    asm_enter_task(stack);
 }
 
 static void idle_task() {
