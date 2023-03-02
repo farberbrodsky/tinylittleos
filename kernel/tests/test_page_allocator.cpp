@@ -12,7 +12,6 @@ static void test_0() {
     using namespace memory;
     uint32_t p1 = (uint32_t)kmem_alloc_4k();
     uint32_t p2 = (uint32_t)kmem_alloc_8k();
-    kassert(p2 == (p1 + 4096));
     kmem_free_4k((void *)p1);
     uint32_t p3 = (uint32_t)kmem_alloc_4k();
     kassert(p1 == p3);

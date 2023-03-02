@@ -1,3 +1,4 @@
+#pragma once
 #include <kernel/util.hpp>
 #include <kernel/fs/vfs.hpp>
 

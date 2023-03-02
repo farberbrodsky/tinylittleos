@@ -61,7 +61,7 @@ void serial::initialize() {
 
 void serial::put(char c) {
     while (!serial_is_transmit_fifo_empty(SERIAL_COM1_BASE))
-        asm("pause");
+        asm volatile("pause" ::: "memory");
 
     asm_outb(SERIAL_DATA_PORT(SERIAL_COM1_BASE), c);
 }
