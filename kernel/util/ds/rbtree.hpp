@@ -3,6 +3,7 @@
 #include <kernel/logging.hpp>
 #include <kernel/util/lock.hpp>
 
+// TODO current implementation is just an unbalanced binary tree; implement a red-black tree
 namespace ds {
     template <class T>
     struct intrusive_rb_node;
@@ -44,7 +45,6 @@ namespace ds {
     private:
         intrusive_rb_node<T> *m_parent;       // nullptr for root
         intrusive_rb_node<T> *m_children[2];  // nullptr for invalid - indexed by LEFT, RIGHT
-        bool m_is_black;
 
         static constexpr inline int LEFT = 0;
         static constexpr inline int RIGHT = 1;
@@ -98,249 +98,55 @@ namespace ds {
         inline intrusive_rb_node<T> *parent_node_for_tests() {
             return m_parent;
         }
-        inline bool is_black_for_test() {
-            return m_is_black;
-        }
 
     private:
-        static intrusive_rb_node<T> *rotate(intrusive_rb_node<T> *&tree, intrusive_rb_node<T> &parent, int dir) {
-            intrusive_rb_node<T> *gparent = parent.m_parent;
-            intrusive_rb_node<T> *sibling = parent.m_children[1 - dir];
-            kassert(sibling != nullptr);
-            intrusive_rb_node<T> *close = sibling->m_children[dir];
-
-            parent.m_children[1 - dir] = close;
-
-            if (close != nullptr)
-                close->m_parent = &parent;
-
-            sibling->m_children[dir] = &parent;
-            parent.m_parent = sibling;
-
-            sibling->m_parent = gparent;
-            if (gparent != nullptr)
-                gparent->m_children[gparent->dir_of_child(&parent)] = sibling;
-            else
-                tree = sibling;
-
-            return sibling;  // new root of subtree
-        }
-
         // Insert node as a child of the given parent at direction
         static void insert(intrusive_rb_node<T> *&treeroot, intrusive_rb_node<T> *node, intrusive_rb_node<T> *parent, int dir) {
             node->m_parent = parent;
             node->left() = nullptr;
             node->right() = nullptr;
-            node->m_is_black = false;
-
             if (parent == nullptr) {
-                node->m_is_black = true;
                 treeroot = node;
                 return;
             }
-
             parent->m_children[dir] = node;
-
-            intrusive_rb_node<T> *gparent;
-            intrusive_rb_node<T> *uncle;
-
-            do {
-                if (parent->m_is_black)
-                    return;
-                gparent = parent->m_parent;
-                if (gparent == nullptr) {
-                    parent->m_is_black = true;
-                    return;
-                }
-
-                dir = gparent->dir_of_child(parent);
-                uncle = gparent->m_children[1 - dir];
-
-                if (uncle == nullptr || uncle->m_is_black) {
-                    if (node == parent->m_children[1 - dir]) {
-                        rotate(treeroot, *parent, dir);
-                        node = parent;
-                        parent = gparent->m_children[dir];
-                    }
-                    rotate(treeroot, *gparent, 1 - dir);
-                    parent->m_is_black = true;
-                    gparent->m_is_black = false;
-                    return;
-                }
-
-                parent->m_is_black = true;
-                uncle->m_is_black = true;
-                gparent->m_is_black = false;
-                node = gparent;
-            } while ((parent = node->m_parent) != nullptr);
         }
 
         // Remove me from tree
         void remove_me(intrusive_rb_node<T> *&treeroot) {
-            TINY_INFO(formatting::hex{this}, ' ', formatting::hex{treeroot}, ' ', left() != nullptr, right() != nullptr);
             if (this == treeroot && left() == nullptr && right() == nullptr) {
-                TINY_INFO("a");
                 // am a lonely root
                 treeroot = nullptr;
-                return;
-            }
-            if (left() != nullptr && right() != nullptr) {
-                TINY_INFO("b");
-                intrusive_rb_node<T> *replacement = prev_node();
-
-                // root should point at replacement
-                if (this == treeroot)
-                    treeroot = replacement;
-
-                // parent should point at replacement
-                if (m_parent) {
-                    if (this == m_parent->left())
-                        m_parent->left() = replacement;
-                    else
-                        m_parent->right() = replacement;
-                }
-
-                if (replacement->left() != nullptr)
-                    replacement->left()->m_parent = this;
-                if (replacement->right() != nullptr)
-                    replacement->right()->m_parent = this;
-
-                if (this == replacement->m_parent) {
-                    // tmps will be copied into this
-                    intrusive_rb_node<T> *tmp_left = replacement->left();
-                    intrusive_rb_node<T> *tmp_right = replacement->right();
-                    bool tmp_is_black = replacement->m_is_black;
-
-                    if (replacement == left()) {
-                        replacement->right() = right();
-                        replacement->left() = this;
-                    } else {
-                        replacement->left() = left();
-                        replacement->right() = this;
-                    }
-                    replacement->m_parent = m_parent;
-                    replacement->m_is_black = m_is_black;
-
-                    m_parent = replacement;
-                    left() = tmp_left;
-                    right() = tmp_right;
-                    m_is_black = tmp_is_black;
-                } else {
-                    TINY_INFO("c");
-                    if (replacement == replacement->m_parent->left())
-                        replacement->m_parent->left() = this;
-                    else
-                        replacement->m_parent->right() = this;
-
-                    // exchange replacement and my node information
-                    intrusive_rb_node<T> *tmp_left = replacement->left();
-                    intrusive_rb_node<T> *tmp_right = replacement->right();
-                    bool tmp_is_black = replacement->m_is_black;
-
-                    replacement->left() = left();
-                    replacement->right() = right();
-                    replacement->m_is_black = m_is_black;
-
-                    left() = tmp_left;
-                    right() = tmp_right;
-                    m_is_black = tmp_is_black;
-                }
-
-                if (replacement->left() != nullptr)
-                    replacement->left()->m_parent = replacement;
-                if (replacement->right() != nullptr)
-                    replacement->right()->m_parent = replacement;
-            }
-
-            intrusive_rb_node<T> *parent = m_parent;
-
-            TINY_INFO("d");
-            if (!m_is_black) {
-                kassert(parent != nullptr);
-                parent->m_children[parent->dir_of_child(this)] = nullptr;
-                return;
-            }
-
-            if (left() == nullptr && right() == nullptr) {
-                TINY_INFO("f ", m_parent != nullptr);
-                intrusive_rb_node<T> *parent;
-                intrusive_rb_node<T> *sibling;
-                intrusive_rb_node<T> *close;
-                intrusive_rb_node<T> *distant;
-                intrusive_rb_node<T> *node = this;
-
-                parent = node->m_parent;
-                int dir = parent->dir_of_child(this);
-                parent->m_children[dir] = nullptr;
-                goto skip_dir_of_child;
-
-                do {
-                    dir = parent->dir_of_child(this);
-skip_dir_of_child:
-                    sibling = parent->m_children[1 - dir];
-                    TINY_INFO(sibling != nullptr);
-                    distant = sibling->m_children[1 - dir];
-                    TINY_INFO(distant != nullptr);
-                    close = sibling->m_children[dir];
-                    TINY_INFO(close != nullptr);
-
-                    if (sibling != nullptr && !sibling->m_is_black) {
-                        TINY_INFO("f1");
-                        rotate(treeroot, *parent, dir);
-                        parent->m_is_black = false;
-                        sibling->m_is_black = true;
-                        sibling = close;
-                        distant = sibling->m_children[1 - dir];
-                        if (distant != nullptr && !distant->m_is_black)
-                            goto Case_D6;
-                        close = sibling->m_children[dir];
-                        if (close != nullptr && !close->m_is_black)
-                            goto Case_D5;
-                        goto Case_D4;
-                    }
-                    if (distant != nullptr && !distant->m_is_black) {
-Case_D6:
-                        TINY_INFO("f2");
-                        rotate(treeroot, *parent, dir);
-                        sibling->m_is_black = parent->m_is_black;
-                        parent->m_is_black = true;
-                        distant->m_is_black = true;
-                        return;
-                    }
-                    if (close != nullptr && !close->m_is_black) {
-Case_D5:
-                        TINY_INFO("f3");
-                        rotate(treeroot, *sibling, 1 - dir);
-                        sibling->m_is_black = false;
-                        close->m_is_black = true;
-                        distant = sibling;
-                        sibling = close;
-                        goto Case_D6;
-                    }
-                    if (!parent->m_is_black) {
-Case_D4:
-                        TINY_INFO("f4");
-                        sibling->m_is_black = false;
-                        parent->m_is_black = true;
-                        return;
-                    }
-                    TINY_INFO("f5");
-                    // case 1
-                    sibling->m_is_black = false;
-                    node = parent;
-                } while ((parent = node->m_parent) != nullptr);
+            } else if (left() == nullptr && right() == nullptr) {
+                // am lonely but not root
+                m_parent->m_children[m_parent->dir_of_child(this)] = nullptr;
             } else {
-                TINY_INFO("g ", parent != nullptr);
-                // have one child and am black
-                intrusive_rb_node<T> *replacement;
-                if (left() != nullptr) replacement = left();
-                else                   replacement = right();
-                replacement->m_parent = parent;
-                replacement->m_is_black = true;
-                if (parent != nullptr)
-                    parent->m_children[parent->dir_of_child(this)] = replacement;
+                // have at least one child: replace me with predecessor or successor
+                int child_dir = (left() == nullptr) ? RIGHT : LEFT;
+                intrusive_rb_node<T> *replaced_node = m_children[child_dir];
+                kassert(replaced_node != nullptr);
+                while (replaced_node->m_children[1 - child_dir] != nullptr)
+                    replaced_node = replaced_node->m_children[1 - child_dir];
+
+                // unlink replace_node which is easy since it has at most one child
+                kassert(replaced_node != nullptr && replaced_node->m_parent != nullptr);
+                intrusive_rb_node<T> *replaced_child = replaced_node->left() ? replaced_node->left() : replaced_node->right();
+                intrusive_rb_node<T> *replaced_parent = replaced_node->m_parent;
+                replaced_parent->m_children[replaced_parent->dir_of_child(replaced_node)] = replaced_child;
+                if (replaced_child)
+                    replaced_child->m_parent = replaced_parent;
+
+                // replace me with replaced
+                replaced_node->m_parent = m_parent;
+                replaced_node->left() = left();
+                if (left() != nullptr) left()->m_parent = replaced_node;
+                replaced_node->right() = right();
+                if (right() != nullptr) right()->m_parent = replaced_node;
+
+                if (m_parent != nullptr)
+                    m_parent->m_children[m_parent->dir_of_child(this)] = replaced_node;
                 else
-                    treeroot = replacement;
+                    treeroot = replaced_node;
             }
         }
 
