@@ -20,6 +20,7 @@ namespace interrupts {
 
     void reduce_interrupt_depth();  // called by e.g. scheduler
     bool is_interrupt_context();  // is currently inside an interrupt?
+    int get_interrupt_context_depth();  // current depth of interrupt context
     void initialize();
     void start();  // start getting interrupts
     void register_handler(uint interrupt, void (*interrupt_handler)(interrupt_args &args));

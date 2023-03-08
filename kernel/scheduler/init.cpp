@@ -139,7 +139,7 @@ void scheduler::timeslice_passed(interrupts::interrupt_args &resume_info) {
     kassert_is_interrupt;
     if (current_task == 0) [[unlikely]]
         return;  // not initialized yet
-    if (__atomic_load_n(&preempt_counter, __ATOMIC_ACQUIRE) != 0)
+    if (__atomic_load_n(&preempt_counter, __ATOMIC_ACQUIRE) != 0 || interrupts::get_interrupt_context_depth() > 1)
         return;  // preemption is locked
 
     interrupts::reduce_interrupt_depth();

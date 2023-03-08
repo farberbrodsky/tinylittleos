@@ -3,6 +3,7 @@
 #include <kernel/util/ds/list.hpp>
 #include <kernel/interrupts/init.hpp>
 #include <kernel/util/ds/refcount.hpp>
+#include <kernel/memory/virtual_memory.hpp>
 
 namespace scheduler {
     struct __attribute__((packed)) tss_entry {
@@ -40,6 +41,7 @@ namespace scheduler {
     struct task final : ds::intrusive_doubly_linked_node<task>, ds::intrusive_refcount {
         uint32_t pid;
         char *stack_pointer;  // should have an interrupts::interrupt_args at the top
+        memory::virtual_memory vm;
 
         // create a task, to link it later
         // starts with one reference - it is assumed for the running of the task that the scheduler holds a reference and the running has a reference

@@ -1,7 +1,5 @@
 #pragma once
 #include <kernel/util.hpp>
-#include <kernel/logging.hpp>
-#include <kernel/util/lock.hpp>
 
 // TODO current implementation is just an unbalanced binary tree; implement a red-black tree
 namespace ds {

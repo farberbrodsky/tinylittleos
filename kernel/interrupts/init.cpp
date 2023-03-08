@@ -127,6 +127,10 @@ bool interrupts::is_interrupt_context() {
     return interrupt_context_depth != 0;
 }
 
+int interrupts::get_interrupt_context_depth() {
+    return interrupt_context_depth;
+}
+
 extern "C" void internal_interrupt_handler(interrupts::interrupt_args *arg) {
     __atomic_add_fetch(&interrupt_context_depth, 1, __ATOMIC_SEQ_CST);
 

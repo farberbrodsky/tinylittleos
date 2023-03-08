@@ -30,6 +30,7 @@ common_interrupt_handler:               ; the common parts of the generic interr
 
     ; call the C++ function
     cld
+    xor ebp, ebp
     extern internal_interrupt_handler
     call internal_interrupt_handler
 
