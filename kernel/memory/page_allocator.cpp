@@ -64,11 +64,11 @@ struct {
     inline buddy& first_N() {
         if constexpr (N == 4096) {
             return reinterpret_cast<buddy&>(first_k4);
-        } else if (N == 8192) {
+        } else if constexpr (N == 8192) {
             return reinterpret_cast<buddy&>(first_k8);
-        } else if (N == 16384) {
+        } else if constexpr (N == 16384) {
             return reinterpret_cast<buddy&>(first_k16);
-        } else if (N == 32768) {
+        } else if constexpr (N == 32768) {
             return reinterpret_cast<buddy&>(first_k32);
         }
     }
@@ -79,11 +79,11 @@ struct buddy : buddy_data {
     inline buddy *next_N() {
         if constexpr (N == 4096) {
             return next_k4;
-        } else if (N == 8192) {
+        } else if constexpr (N == 8192) {
             return next_k8;
-        } else if (N == 16384) {
+        } else if constexpr (N == 16384) {
             return next_k16;
-        } else if (N == 32768) {
+        } else if constexpr (N == 32768) {
             return next_k32;
         }
     }
@@ -230,7 +230,7 @@ public:
 
             return (void *)(my_first_page + (index << 12));
 
-        } else if (N == 8192) {
+        } else if constexpr (N == 8192) {
 
             uint32_t arr_index = 2;
             if (k8[0] != 0) {
@@ -253,7 +253,7 @@ public:
 
             return (void *)(my_first_page + (index << 13));
 
-        } else if (N == 16384) {
+        } else if constexpr (N == 16384) {
 
             uint32_t bit = __builtin_ctz(k16);
 
@@ -269,7 +269,7 @@ public:
 
             return (void *)(my_first_page + (bit << 14));
 
-        } else if (N == 32768) {
+        } else if constexpr (N == 32768) {
 
             uint32_t bit = __builtin_ctz(k32);
 
@@ -326,7 +326,7 @@ private:
                 free_up<8192>(index >> 1);
             }
 
-        } else if (N == 8192) {
+        } else if constexpr (N == 8192) {
 
             mark_free_k8(index);
             // check if buddy is free
@@ -339,7 +339,7 @@ private:
                 free_up<16384>(index >> 1);
             }
 
-        } else if (N == 16384) {
+        } else if constexpr (N == 16384) {
 
             mark_free_k16(index);
             // check if buddy is free
@@ -351,7 +351,7 @@ private:
                 free_up<32768>(index >> 1);
             }
 
-        } else if (N == 32768) {
+        } else if constexpr (N == 32768) {
 
             mark_free_k32(index);
 

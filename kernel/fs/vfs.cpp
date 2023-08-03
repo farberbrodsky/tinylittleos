@@ -42,7 +42,7 @@ file_desc::file_desc(inode *owner) : owner_inode(owner), f_mode(0), f_pos(0), f_
     owner->take_ref();
 }
 file_desc::~file_desc() {
-    owner_inode->release_ref();
+    inode::release(owner_inode);
 }
 
 ssize_t file_desc::read(char *buf, size_t count) {
