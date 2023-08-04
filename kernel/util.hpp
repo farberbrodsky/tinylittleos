@@ -80,3 +80,6 @@ inline void *operator new(size_t, void *p)     noexcept { return p; }
 inline void *operator new[](size_t, void *p)   noexcept { return p; }
 inline void  operator delete  (void *, void *) noexcept { };
 inline void  operator delete[](void *, void *) noexcept { };
+
+// once we have all of the defines, tty can and should be loaded
+#include <kernel/tty.hpp>

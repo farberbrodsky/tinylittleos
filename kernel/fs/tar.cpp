@@ -1,5 +1,4 @@
 #include <kernel/fs/tar.hpp>
-#include <kernel/tty.hpp>
 #include <kernel/logging.hpp>
 using namespace fs;
 

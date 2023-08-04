@@ -6,6 +6,9 @@
 namespace fs {
     struct file_desc;
 }
+namespace scheduler {
+    struct task;
+}
 
 namespace memory {
     struct vm_area : ds::intrusive_rb_node<vm_area> {
@@ -19,12 +22,19 @@ namespace memory {
         fs::file_desc *m_file;
     };
 
-    struct virtual_memory : ds::intrusive_refcount {
+    // currently owned by a task
+    struct virtual_memory {
+        friend scheduler::task;
     private:
         ds::rbtree<vm_area> m_areas;
 
+    private:
+        // should only be called (implicitly) in task constructor
+        inline virtual_memory() : m_areas{} {};
+        // destroys all vm areas - should only be called in task destructor
+        ~virtual_memory();
+
     public:
         static void release(virtual_memory *obj);
-        inline virtual_memory(void) : m_areas{} {}
     };
 }

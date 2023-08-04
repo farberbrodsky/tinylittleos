@@ -4,7 +4,6 @@
 #include <kernel/util/asm_wrap.hpp>
 #include <kernel/memory/slab.hpp>
 #include <kernel/logging.hpp>
-#include <kernel/tty.hpp>
 #include <kernel/interrupts/init.hpp>
 
 scheduler::tss_entry scheduler::global_tss;

@@ -4,7 +4,6 @@
 #include <kernel/util/string.hpp>
 #include <kernel/util/asm_wrap.hpp>
 #include <kernel/logging.hpp>
-#include <kernel/tty.hpp>
 using namespace memory;
 
 extern "C" {

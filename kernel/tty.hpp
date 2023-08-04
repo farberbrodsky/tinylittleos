@@ -1,6 +1,5 @@
 #pragma once
 #include <kernel/formatting.hpp>
-#include <kernel/util.hpp>
 #include <kernel/util/string.hpp>
 
 namespace tty {

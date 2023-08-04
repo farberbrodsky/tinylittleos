@@ -24,6 +24,10 @@ namespace ds {
             return static_cast<T *>(l_prev);
         }
 
+        inline bool empty() {
+            return l_next == this;
+        }
+
         inline void unlink() {
             l_prev->l_next = l_next;
             l_next->l_prev = l_prev;

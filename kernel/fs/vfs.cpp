@@ -5,7 +5,6 @@
 #include <kernel/util/ds/list.hpp>
 #include <kernel/util/ds/hashtable.hpp>
 #include <kernel/logging.hpp>
-#include <kernel/tty.hpp>
 using namespace fs;
 
 memory::untyped_slab_allocator<PATH_NAME_MAX> path_name_alloc;
