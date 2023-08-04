@@ -37,24 +37,13 @@ namespace scheduler {
         uint16_t iomap_base;
     };
 
-    // tasks are in linked lists managed by scheduler
-    struct task final : ds::intrusive_doubly_linked_node<task>, ds::intrusive_refcount {
-        uint32_t pid;
-        char *stack_pointer;  // should have an interrupts::interrupt_args at the top
-        memory::virtual_memory vm;
-
-        // create a task, to link it later
-        // starts with one reference - it is assumed for the running of the task that the scheduler holds a reference and the running has a reference
-        // do NOT call from interrupt context
-        static task *allocate(void (*run)(void));
-        // call to release a reference to a task
-        // do NOT call from interrupt context
-        static void release(task *obj);
-
-    public:
-        // please only construct using allocate
-        task(uint32_t _pid, char *_stack_pointer);
+    // the scheduling subsystem of a task
+    struct task_scheduling : public ds::intrusive_doubly_linked_node<task_scheduling> {
+        // currently, only need to be on a linked list
     };
+
+    // for pointers in this header file
+    struct task;
 
     // information which is at the highest address of the stack, and is only needed within the task
     struct task_internal {

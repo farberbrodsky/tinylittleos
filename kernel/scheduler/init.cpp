@@ -1,4 +1,5 @@
 #include <kernel/scheduler/init.hpp>
+#include <kernel/scheduler/task.hpp>
 #include <kernel/util/string.hpp>
 #include <kernel/memory/page_allocator.hpp>
 #include <kernel/util/asm_wrap.hpp>
@@ -45,7 +46,7 @@ static void task_wrapper(void (*call)(void)) {
     // finalization
     preempt_up();  // during finalization, disable preemption
     task *me = current_task;
-    current_task = me->get_next();
+    current_task = task::from(me->scheduling()->get_next());
     unlink_task(me);
     task::release(me);
     memory::kmem_free_4k(hmem_mappings_page_table);
@@ -125,11 +126,11 @@ void scheduler::start() {
 
 void scheduler::link_task(task *t) {
     t->take_ref();
-    current_task->add_after_self(t);
+    current_task->scheduling()->add_after_self(t->scheduling());
 }
 
 void scheduler::unlink_task(task *t) {
-    t->unlink();
+    t->scheduling()->unlink();
     t->release_ref();
 }
 
@@ -145,7 +146,7 @@ void scheduler::timeslice_passed(interrupts::interrupt_args &resume_info) {
     // set stack pointer to point to interrupt info
     current_task->stack_pointer = reinterpret_cast<char *>(&resume_info);
     // enter the next stack pointer (round robin scheduler)
-    current_task = current_task->get_next();
+    current_task = task::from(current_task->scheduling()->get_next());
     enter_task(current_task->stack_pointer);
 }
 

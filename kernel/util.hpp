@@ -7,6 +7,9 @@ using uint = unsigned int;
 using reg_t = size_t;
 using pid_t = uint32_t;
 
+#define offsetof(type, member) ((size_t)(&((type *)0)->member))
+#define container_of(ptr, type, member) ((type *)((char *)(ptr) - offsetof(type, member))) 
+
 void __kassert_fail_internal(const char *assertion, const char *file, uint line, const char *function);
 
 #define kassert(expr) do { __kassert_internal(expr, #expr, __FILE__, __LINE__, __PRETTY_FUNCTION__); } while (0);
