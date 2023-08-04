@@ -2,6 +2,7 @@
 #include <kernel/util.hpp>
 #include <kernel/util/string.hpp>
 #include <kernel/memory/slab.hpp>
+#include <kernel/scheduler/mutex.hpp>
 #include <kernel/util/ds/refcount.hpp>
 
 namespace fs {
@@ -43,7 +44,36 @@ namespace fs {
     // kernel uses inode structs to traverse directories
     // root inode must be in memory, other inodes can be freed
     // implementors MUST call take_parent_struct(this) and release_parent_struct(this)
-    struct inode : ds::intrusive_refcount {
+    struct inode {
+    public:
+        // lock needed to decrease refcount, and change the inode itself
+        scheduler::concurrency::mutex i_lock;
+
+    private:
+        int32_t i_rc;
+
+    public:
+        // take reference, under a lock
+        inline void take_ref_locked() {
+            scoped_mutex lock { i_lock };
+            kassert(i_rc > 0);
+            ++i_rc;
+        }
+
+    private:
+        // release reference, under a lock - private because should only be called by release
+        inline bool release_ref_locked() {
+            scoped_mutex lock { i_lock };
+            kassert(i_rc > 0);
+            if ((--i_rc) == 0) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+    public:
+        // fields of the inode
         vfs *owner_fs;
         inode *i_parent_ref;
         uint16_t i_mode;
@@ -57,20 +87,25 @@ namespace fs {
         // TODO add "new" flag which says that the inode is not ready - right now it is loaded *synchronously* from disk
         // see https://www.kernel.org/doc/htmldocs/filesystems/API-iget-locked.html for inspiration
 
-        // TODO TODO TODO when preempting arrives add reader-writer lock for unlink,create and lookup
+    public:
+        // member functions defined by inode struct
+        errno open(file_desc *&result);
+        static void release(inode *obj);
+
+    public:
+        // member functions implemented by each inode implementor
+        // these functions are responsible for using the i_lock for now!!!
         virtual errno lookup(string_buf name, uint32_t &found_i) = 0;
         virtual errno create(string_buf name, uint16_t mode, uint32_t &new_i) = 0;
         virtual errno unlink(string_buf name) = 0;
         // set the methods (f_read, f_write) for a file
-        virtual void set_file_methods(file_desc *);
-
-        errno open(file_desc *&result);
-
-        static void release(inode *obj);
+        virtual void set_file_methods(file_desc *) = 0;
 
     protected:
         // do not call constructor directly
         inline inode(vfs *owner, inode *parent) : owner_fs(owner), i_parent_ref(parent) {}
+        // some destructing work is done by release()
+        inline ~inode() {};
     };
 
     // MUST be called in constructor and destructor

@@ -135,6 +135,13 @@ void scheduler::unlink_task(task *t) {
     t->release_ref();
 }
 
+void scheduler::pick_next_task()
+{
+    do {
+        current_task = task::from(current_task->scheduling.get_next());
+    } while (current_task->blocking.is_blocked());
+}
+
 // called from interrupt context - so need to enable interrupts
 void scheduler::timeslice_passed(interrupts::interrupt_args &resume_info) {
     kassert_is_interrupt;
@@ -149,8 +156,8 @@ void scheduler::timeslice_passed(interrupts::interrupt_args &resume_info) {
     interrupts::reduce_interrupt_depth();
     // set stack pointer to point to interrupt info
     current_task->stack_pointer = reinterpret_cast<char *>(&resume_info);
-    // enter the next stack pointer (round robin scheduler)
-    current_task = task::from(current_task->scheduling.get_next());
+    // enter the next stack pointer
+    pick_next_task();
     enter_task(current_task->stack_pointer);
 }
 
@@ -164,11 +171,13 @@ void scheduler::preempt_up() {
 }
 
 extern "C" __attribute__((cdecl)) void do_yield(interrupts::interrupt_args *stack_arg) {
+    using namespace scheduler;
+
     // set stack pointer to point to interrupt info
-    scheduler::current_task->stack_pointer = reinterpret_cast<char *>(stack_arg);
-    // enter the next stack pointer (round robin scheduler)
-    scheduler::current_task = scheduler::task::from(scheduler::current_task->scheduling.get_next());
-    enter_task(scheduler::current_task->stack_pointer);
+    current_task->stack_pointer = reinterpret_cast<char *>(stack_arg);
+    // enter the next stack pointer
+    pick_next_task();
+    enter_task(current_task->stack_pointer);
 }
 
 void scheduler::yield() {

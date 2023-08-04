@@ -15,7 +15,24 @@
 
 static void show_splash();
 
+static void second_task() {
+    while (1) {
+        {
+            scoped_preemptlock lock;
+            tty_driver::write("hello world!\n");
+        }
+        for (int i = 0; i < 1000000; i++)
+            asm volatile("pause" ::: "memory");
+    }
+}
+
 static void main_task() {
+    // start from the splash screen
+    show_splash();
+
+    // add a background task
+    scheduler::link_task(scheduler::task::allocate(second_task));
+
     fs::inode *a;
     fs::file_desc *f;
     errno e = fs::traverse("/initrd/shell.elf", a);
@@ -28,16 +45,6 @@ static void main_task() {
     asm_enter_usermode(entry, memory::kmem_alloc_4k());
 }
 
-static void second_task() {
-    while (1) {
-        {
-            scoped_preemptlock lock;
-            tty_driver::write("hello world!\n");
-        }
-        for (int i = 0; i < 1000000; i++)
-            asm volatile("pause" ::: "memory");
-    }
-}
 
 extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     tty::initialize();
@@ -53,15 +60,11 @@ extern "C" void kmain(multiboot_info_t *multiboot_data, uint multiboot_magic) {
     interrupts::start();
 
     fs::register_initrd("/initrd");
-    show_splash();
-
     scheduler::initialize();
     scheduler::task *main = scheduler::task::allocate(main_task);
-    scheduler::task *second = scheduler::task::allocate(second_task);
-    kassert(main != nullptr && second != nullptr);
+    kassert(main != nullptr);
     scheduler::link_task(main);
-    scheduler::link_task(second);
-    // do not release tasks, because the task itself wants to have a reference
+    // do not release task, because the task itself wants to have a reference
     scheduler::start();
     kpanic("scheduler::start returned");
 }

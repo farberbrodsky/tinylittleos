@@ -38,7 +38,7 @@ static ssize_t default_f_write(file_desc *, char *, size_t, uint64_t) {
 }
 
 file_desc::file_desc(inode *owner) : owner_inode(owner), f_mode(0), f_pos(0), f_read(default_f_read), f_write(default_f_write) {
-    owner->take_ref();
+    owner->take_ref_locked();
 }
 file_desc::~file_desc() {
     inode::release(owner_inode);
@@ -95,7 +95,7 @@ static inode *get_inode_struct(vfs *fs, uint32_t i_num, inode *parent) {
 
     if (result != nullptr) {
         kassert(i_num == result->i_num);
-        result->take_ref();
+        result->take_ref_locked();
     } else {
         // need to allocate inode struct
         result = fs->alloc_inode_struct(i_num, parent);  // (comes with 1 reference as needed)
@@ -107,7 +107,7 @@ static inode *get_inode_struct(vfs *fs, uint32_t i_num, inode *parent) {
 }
 
 void fs::inode::release(inode *obj) {
-    if (obj->release_ref()) {
+    if (obj->release_ref_locked()) {
         ds::hashtable<256> *ht = reinterpret_cast<ds::hashtable<256> *>(obj->owner_fs->__hashtable);
         ht->remove(obj->i_num);
         obj->owner_fs->free_inode_struct(obj);
@@ -115,7 +115,7 @@ void fs::inode::release(inode *obj) {
 }
 
 void fs::take_parent_struct(inode *i) {
-    if (i->i_parent_ref) i->i_parent_ref->take_ref();
+    if (i->i_parent_ref) i->i_parent_ref->take_ref_locked();
 }
 
 void fs::release_parent_struct(inode *i) {

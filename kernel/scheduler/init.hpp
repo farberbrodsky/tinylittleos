@@ -80,4 +80,8 @@ namespace scheduler {
     // voluntarily yield back to scheduler
     // preemption should be disabled, and should not be called in interrupt context
     void yield();
+
+    // scheduling algorithm - pick the next task to run, and switch the current task to it
+    // called internally and under a full interrupt lock
+    void pick_next_task();
 }

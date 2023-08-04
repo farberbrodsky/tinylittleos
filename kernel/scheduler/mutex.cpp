@@ -6,6 +6,8 @@ void scheduler::concurrency::mutex::lock() {
     kassert_not_interrupt;
     // lock preemption
     scheduler::preempt_up();
+    // not to be called by the owner
+    kassert(m_owner != scheduler::current_task);
 
     if (m_owner == nullptr) {
         // uncontended case
@@ -16,18 +18,22 @@ void scheduler::concurrency::mutex::lock() {
         // contended case - start blocking, then enable preemption and yield to the scheduler
         scheduler::current_task->blocking.block_on(&m_list);
         // unlock preemption and yield
+        // we won't be resumed until we're unblocked
         scheduler::preempt_down();
         scheduler::yield();
+        kassert(m_owner == scheduler::current_task);
     }
 }
 
 void scheduler::concurrency::mutex::unlock() {
     // not applicable for interrupt context
-    kassert(!interrupts::is_interrupt_context());
-    kassert(m_owner == scheduler::current_task);
+    kassert_not_interrupt;
+    // lock preemption
     scoped_preemptlock internal_lock;
+    // only called by owner
+    kassert(m_owner == scheduler::current_task);
 
-    if (!m_list.lonely()) {
+    if (m_list.lonely()) {
         // uncontended case
         m_owner = nullptr;
     } else {

@@ -1,6 +1,7 @@
 #pragma once
 #include <kernel/util.hpp>
 #include <kernel/scheduler/init.hpp>
+#include <kernel/scheduler/mutex.hpp>
 
 // Scoped Interrupt Lock - saves interrupt flag and restores it
 struct scoped_intlock {
@@ -20,12 +21,8 @@ public:
     inline scoped_intlock(scoped_intlock&& other) noexcept : m_flags(other.m_flags) {
         other.m_flags = 0;  // shouldn't set interrupts back
     }
-    inline scoped_intlock &operator=(scoped_intlock&& other) noexcept {
-        m_flags = other.m_flags;
-        other.m_flags = 0;
-        return *this;
-    }
 
+    inline scoped_intlock &operator=(scoped_intlock&& other) = delete;
     scoped_intlock(const scoped_intlock &other) = delete;
     inline scoped_intlock &operator=(const scoped_intlock &other) = delete;
 private:
@@ -49,14 +46,33 @@ public:
         other.m_moved = true;
         // don't increase again
     }
-    inline scoped_preemptlock &operator=(scoped_preemptlock&& other) noexcept {
-        m_moved = other.m_moved;
-        other.m_moved = true;
-        return *this;
-    }
 
+    inline scoped_preemptlock &operator=(scoped_preemptlock&& other) = delete;
     scoped_preemptlock(const scoped_preemptlock &other) = delete;
     inline scoped_preemptlock &operator=(const scoped_preemptlock &other) = delete;
 private:
     bool m_moved;
+};
+
+// Scoped Mutex Lock - locks a mutex
+struct scoped_mutex {
+    inline scoped_mutex(scheduler::concurrency::mutex &mtx) : m_mtx {&mtx} {
+        m_mtx->lock();
+    }
+    inline ~scoped_mutex() {
+        if (m_mtx) {
+            m_mtx->unlock();
+        }
+    }
+
+    // move semantics
+    inline scoped_mutex(scoped_mutex&& other) noexcept : m_mtx {other.m_mtx} {
+        other.m_mtx = nullptr;
+    }
+
+    inline scoped_mutex &operator=(scoped_mutex&& other) = delete;
+    scoped_mutex(const scoped_mutex &other) = delete;
+    inline scoped_mutex &operator=(const scoped_mutex &other) = delete;
+private:
+    scheduler::concurrency::mutex *m_mtx;
 };
