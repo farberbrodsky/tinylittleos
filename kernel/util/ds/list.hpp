@@ -10,7 +10,7 @@ namespace ds {
         intrusive_doubly_linked_node<T> *l_next;
 
     public:
-        inline intrusive_doubly_linked_node() : l_prev(this), l_next(this) {}
+        inline constexpr intrusive_doubly_linked_node() : l_prev(this), l_next(this) {}
         // no copy or move
         intrusive_doubly_linked_node(const intrusive_doubly_linked_node &other) = delete;
         intrusive_doubly_linked_node &operator=(const intrusive_doubly_linked_node &other) = delete;

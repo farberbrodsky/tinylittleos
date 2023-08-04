@@ -29,7 +29,7 @@ namespace ds {
         inline void reset();
         inline intrusive_rb_node<T> *get_root_for_tests() { return m_root; }
     public:
-        inline rbtree() : m_root {nullptr} {}
+        inline constexpr rbtree() : m_root {nullptr} {}
         // no copy or move
         rbtree(const rbtree<T> &other) = delete;
         rbtree<T> &operator=(const rbtree<T> &other) = delete;
@@ -149,7 +149,7 @@ namespace ds {
         }
 
     public:
-        inline intrusive_rb_node() {}
+        inline constexpr intrusive_rb_node() {}
         // no copy or move
         intrusive_rb_node(const intrusive_rb_node<T> &other) = delete;
         intrusive_rb_node<T> &operator=(const intrusive_rb_node<T> &other) = delete;

@@ -8,7 +8,7 @@ namespace ds {
         static constexpr inline size_t int_count = (bits + 31) / 32;
         uint32_t m_set[int_count];
     public:
-        bitset() : m_set { 0 } {}
+        inline constexpr bitset() : m_set { 0 } {}
         inline constexpr void set_bit(uint32_t index) {
             uint32_t arr_index = index >> 5;     // division by 32
             uint32_t bit = 1 << (index & 0x1F);  // & 0x1F is modulo 32

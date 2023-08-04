@@ -10,7 +10,8 @@ namespace scheduler {
             ds::intrusive_doubly_linked_node<scheduler::task_blocking> m_list;
 
         public:
-            inline mutex() : m_owner {nullptr} {}
+            // compatible with static initialization to 0
+            inline constexpr mutex() : m_owner {nullptr} {}
             inline ~mutex() { kassert(m_owner == nullptr); }
             void lock();
             void unlock();

@@ -7,7 +7,7 @@ namespace ds {
         int32_t rc;
     public:
         // all objects have 1 reference when constructed
-        inline intrusive_refcount() : rc(1) {}
+        inline constexpr intrusive_refcount() : rc(1) {}
         void take_ref();
         // returns true if this was the last reference
         bool release_ref();

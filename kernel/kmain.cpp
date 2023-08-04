@@ -7,6 +7,7 @@
 #include <kernel/interrupts/init.hpp>
 #include <kernel/interrupts/pic.hpp>
 #include <kernel/scheduler/init.hpp>
+#include <kernel/scheduler/task.hpp>
 #include <kernel/fs/tar.hpp>
 #include <kernel/fs/vfs.hpp>
 #include <kernel/scheduler/elf.hpp>
