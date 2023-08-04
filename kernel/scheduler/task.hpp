@@ -1,5 +1,6 @@
 #pragma once
 #include <kernel/scheduler/init.hpp>
+#include <kernel/scheduler/task_blocking.hpp>
 
 namespace scheduler {
     struct task final : ds::intrusive_refcount {
@@ -8,15 +9,14 @@ namespace scheduler {
         char *stack_pointer;  // should have an interrupts::interrupt_args at the top
         memory::virtual_memory vm;
 
-    private:
-        // subsystems
-        task_scheduling _scheduling;
-
     public:
-        // access to subsystems
-        inline task_scheduling *scheduling() { return &_scheduling; }
+        // subsystems
+        task_scheduling scheduling;
+        task_blocking blocking;
+
         // access from subsystems
-        inline static task *from(task_scheduling *x) { return container_of(x, task, _scheduling); }
+        inline static task *from(task_scheduling *x) { return container_of(x, task, scheduling); }
+        inline static task *from(task_blocking *x) { return container_of(x, task, blocking); }
 
     public:
         // create a task, to link it later

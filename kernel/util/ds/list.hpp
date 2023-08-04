@@ -24,7 +24,7 @@ namespace ds {
             return static_cast<T *>(l_prev);
         }
 
-        inline bool empty() {
+        inline bool lonely() {
             return l_next == this;
         }
 

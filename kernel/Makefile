@@ -1,4 +1,4 @@
-OBJECTS = loader.o crti.o util/str_util.o util/cstr.o util/kassert.o util/asm_wrap.o util/ds/hashtable.o util/ds/refcount.o tty.o serial.o memory/gdt.o memory/multiboot.o memory/page_allocator.o interrupts/init.o interrupts/interrupt_handlers.o interrupts/pic.o devices/keyboard.o scheduler/init.o scheduler/elf.o fs/vfs.o fs/tar.o memory/virtual_memory.o initrd.o
+OBJECTS = loader.o crti.o util/str_util.o util/cstr.o util/kassert.o util/asm_wrap.o util/ds/hashtable.o util/ds/refcount.o tty.o serial.o memory/gdt.o memory/multiboot.o memory/page_allocator.o interrupts/init.o interrupts/interrupt_handlers.o interrupts/pic.o devices/keyboard.o scheduler/init.o scheduler/elf.o scheduler/mutex.o fs/vfs.o fs/tar.o memory/virtual_memory.o initrd.o
 CPPFLAGS = -m32 -std=c++20 -Wall -Wextra -ffreestanding -fno-exceptions -fno-rtti -O1 -fno-plt -fno-pic -fno-omit-frame-pointer -I.. -I/usr/include
 CC = gcc
 ifndef testname

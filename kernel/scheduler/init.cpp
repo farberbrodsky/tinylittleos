@@ -4,6 +4,7 @@
 #include <kernel/memory/page_allocator.hpp>
 #include <kernel/util/asm_wrap.hpp>
 #include <kernel/memory/slab.hpp>
+#include <kernel/memory/gdt.hpp>
 #include <kernel/logging.hpp>
 #include <kernel/interrupts/init.hpp>
 
@@ -46,7 +47,7 @@ static void task_wrapper(void (*call)(void)) {
     // finalization
     preempt_up();  // during finalization, disable preemption
     task *me = current_task;
-    current_task = task::from(me->scheduling()->get_next());
+    current_task = task::from(me->scheduling.get_next());
     unlink_task(me);
     task::release(me);
     memory::kmem_free_4k(hmem_mappings_page_table);
@@ -75,7 +76,7 @@ static char *create_kernel_stack(void (*main)(void), reg_t cr3) {
     info->eip = reinterpret_cast<reg_t>(task_wrapper);
     reg_t &arg = *reinterpret_cast<reg_t *>(stack + sizeof(interrupts::interrupt_args) + sizeof(reg_t));
     arg = reinterpret_cast<reg_t>(main);
-    info->cs = 0x08;
+    info->cs = memory::kernel_cs;
     // EFLAGS is 0 so interrupts are initially disabled
     return stack;
 }
@@ -126,17 +127,20 @@ void scheduler::start() {
 
 void scheduler::link_task(task *t) {
     t->take_ref();
-    current_task->scheduling()->add_after_self(t->scheduling());
+    current_task->scheduling.add_after_self(&t->scheduling);
 }
 
 void scheduler::unlink_task(task *t) {
-    t->scheduling()->unlink();
+    t->scheduling.unlink();
     t->release_ref();
 }
 
 // called from interrupt context - so need to enable interrupts
 void scheduler::timeslice_passed(interrupts::interrupt_args &resume_info) {
     kassert_is_interrupt;
+    // no interrupts in this function
+    scoped_intlock lock;
+
     if (current_task == 0) [[unlikely]]
         return;  // not initialized yet
     if (__atomic_load_n(&preempt_counter, __ATOMIC_ACQUIRE) != 0 || interrupts::get_interrupt_context_depth() > 1)
@@ -146,7 +150,7 @@ void scheduler::timeslice_passed(interrupts::interrupt_args &resume_info) {
     // set stack pointer to point to interrupt info
     current_task->stack_pointer = reinterpret_cast<char *>(&resume_info);
     // enter the next stack pointer (round robin scheduler)
-    current_task = task::from(current_task->scheduling()->get_next());
+    current_task = task::from(current_task->scheduling.get_next());
     enter_task(current_task->stack_pointer);
 }
 
@@ -157,4 +161,48 @@ void scheduler::preempt_down() {
 
 void scheduler::preempt_up() {
     __atomic_add_fetch(&preempt_counter, 1, __ATOMIC_ACQ_REL);
+}
+
+extern "C" __attribute__((cdecl)) void do_yield(interrupts::interrupt_args *stack_arg) {
+    // set stack pointer to point to interrupt info
+    scheduler::current_task->stack_pointer = reinterpret_cast<char *>(stack_arg);
+    // enter the next stack pointer (round robin scheduler)
+    scheduler::current_task = scheduler::task::from(scheduler::current_task->scheduling.get_next());
+    enter_task(scheduler::current_task->stack_pointer);
+}
+
+void scheduler::yield() {
+    kassert_not_interrupt;
+    kassert(preempt_counter == 0);
+    // disable interrupts while working on switching
+    interrupts::cli();
+
+    asm volatile(
+            ""
+            "pushf                  \n"  // eflags
+            "pushl %0               \n"  // cs
+            "pushl $0x00            \n"  // placeholder for eip
+            "pushl $0x00            \n"  // error_code
+            "pushl $0x00            \n"  // interrupt_number
+            "pushl %%eax            \n"  // eax
+            "call .get_eip          \n"  // find the eip now
+            "0:                     \n"  // jump back here later
+            "pushl %%ebx            \n"  // ebx
+            "pushl %%ecx            \n"  // ecx
+            "pushl %%edx            \n"  // edx
+            "pushl %%esi            \n"  // esi
+            "pushl %%edi            \n"  // edi
+            "pushl %%ebp            \n"  // ebp
+            "movl %%cr3, %%eax      \n"  // cr3
+            "pushl %%eax            \n"  // ...
+            "pushl %%esp            \n"  // give this whole stack as a paremeter to do_yield
+            "cld                    \n"  // call do_yield with this parameter
+            "call do_yield          \n"  // ...
+            ".get_eip:              \n"  // find the eip of 1: and then jump back
+            "popl %%eax             \n"  // ...
+            "addl $1f - 0b, %%eax   \n"  // ...
+            "mov %%eax, +12(%%esp)  \n"  // ... we have pushed 12 other bytes (error, interrupt, eax)
+            "jmp 0b                 \n"  // ...
+            "1:                     \n"  // the eip pointed to in the stack
+            "" : /* output */ : /* input */ "n"(memory::kernel_cs) : /* clobber */ "memory");
 }

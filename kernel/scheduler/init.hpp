@@ -38,7 +38,7 @@ namespace scheduler {
     };
 
     // the scheduling subsystem of a task
-    struct task_scheduling : public ds::intrusive_doubly_linked_node<task_scheduling> {
+    struct task_scheduling final : public ds::intrusive_doubly_linked_node<task_scheduling> {
         // currently, only need to be on a linked list
     };
 
@@ -76,4 +76,8 @@ namespace scheduler {
     // for preemption locking
     void preempt_up();
     void preempt_down();
+
+    // voluntarily yield back to scheduler
+    // preemption should be disabled, and should not be called in interrupt context
+    void yield();
 }

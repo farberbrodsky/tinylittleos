@@ -2,6 +2,7 @@
 #include <kernel/util.hpp>
 
 namespace interrupts {
+    // if modifying, please look at scheduler::yield too - it generates this kind of struct
     struct __attribute__((packed)) interrupt_args {
         reg_t cr3;
         reg_t ebp;
@@ -26,9 +27,9 @@ namespace interrupts {
     void register_handler(uint interrupt, void (*interrupt_handler)(interrupt_args &args));
 
     inline void sti() {
-        asm volatile("sti");
+        asm volatile("sti" ::: "memory");
     }
     inline void cli() {
-        asm volatile("cli");
+        asm volatile("cli" ::: "memory");
     }
 }
