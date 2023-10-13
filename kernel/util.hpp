@@ -66,8 +66,8 @@ enum class errno : ssize_t {
 
 // C++ features
 
-// std::move
-namespace std {
+// std::move and std::forward
+namespace util {
     template <class T> struct remove_reference      { using type = T; };
     template <class T> struct remove_reference<T&>  { using type = T; };
     template <class T> struct remove_reference<T&&> { using type = T; };
@@ -75,6 +75,10 @@ namespace std {
     template <class T>
     inline constexpr remove_reference_t<T>&& move(T&& t) noexcept {
         return static_cast<remove_reference_t<T>&&>(t);
+    }
+    template <class T>
+    inline constexpr T&& forward(remove_reference_t<T>&& t) noexcept {
+        return static_cast<T&&>(t);
     }
 }
 

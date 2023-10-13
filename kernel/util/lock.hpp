@@ -70,9 +70,81 @@ struct scoped_mutex {
         other.m_mtx = nullptr;
     }
 
-    inline scoped_mutex &operator=(scoped_mutex&& other) = delete;
+    scoped_mutex &operator=(scoped_mutex&& other) = delete;
     scoped_mutex(const scoped_mutex &other) = delete;
-    inline scoped_mutex &operator=(const scoped_mutex &other) = delete;
+    scoped_mutex &operator=(const scoped_mutex &other) = delete;
 private:
     scheduler::concurrency::mutex *m_mtx;
 };
+
+// Mandatory lock - in order to access anything, you need to get through this first
+template <class T, class Lock>
+struct generic_mandatory_lock;
+
+template <class T, class Lock>
+struct generic_mandatory_lock_ref {
+    friend generic_mandatory_lock<T, Lock>;
+private:
+    generic_mandatory_lock<T, Lock> &m_parent;
+
+private:
+    // Defined later
+    inline generic_mandatory_lock_ref(generic_mandatory_lock<T, Lock> &parent);
+    inline ~generic_mandatory_lock_ref();
+
+    // Copy not allowed
+    inline generic_mandatory_lock_ref(const generic_mandatory_lock_ref &other) = delete;
+    generic_mandatory_lock_ref &operator=(const generic_mandatory_lock_ref &other) = delete;
+    // Move not allowed
+    generic_mandatory_lock_ref(generic_mandatory_lock_ref &&other) = delete;
+    generic_mandatory_lock_ref &operator=(generic_mandatory_lock_ref&& other) = delete;
+
+public:
+    inline T &operator*();
+    inline T *operator->();
+};
+
+template <class T, class Lock>
+struct generic_mandatory_lock {
+    friend generic_mandatory_lock_ref<T, Lock>;
+private:
+    T m_value;
+
+public:
+    template <class ...U> inline generic_mandatory_lock(U&&... u)
+        : m_value { util::forward<U>(u)... }
+    {}
+
+    inline generic_mandatory_lock_ref<T, Lock> lock() {
+        return generic_mandatory_lock_ref<T, Lock> { this };
+    }
+
+    inline T &unsafe_protected_value() {
+        return m_value;
+    }
+
+protected:
+    inline static generic_mandatory_lock<T, Lock> *locked_from(T *x) {
+        return container_of(x, generic_mandatory_lock<T, Lock>, m_value);
+    }
+};
+
+template <class T>
+inline generic_mandatory_lock_ref<T>::generic_mandatory_lock_ref(generic_mandatory_lock<T> &parent) : m_parent(parent) {
+    m_parent.m_mtx.lock();
+}
+
+template <class T>
+inline generic_mandatory_lock_ref<T>::~generic_mandatory_lock_ref() {
+    m_parent.m_mtx.unlock();
+}
+
+template <class T>
+inline T &generic_mandatory_lock_ref<T>::operator*() {
+    return m_parent.m_value;
+}
+
+template <class T>
+inline T *generic_mandatory_lock_ref<T>::operator->() {
+    return &m_parent.m_value;
+}
